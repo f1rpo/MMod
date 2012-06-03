@@ -19484,6 +19484,15 @@ void CvPlayerAI::AI_updateVictoryStrategyHash()
 	bool bStartedOtherLevel3 = false;
 	bool bStartedOtherLevel4 = false;
 
+	// K-Mod
+	bool bMasteryVictory = false;
+	for (VictoryTypes i = (VictoryTypes)0; !bMasteryVictory && i < GC.getNumVictoryInfos(); i=(VictoryTypes)(i+1))
+	{
+		if (GC.getGameINLINE().isVictoryValid(i) && GC.getVictoryInfo(i).isTotalVictory())
+			bMasteryVictory = true;
+	}
+	// K-Mod end
+
 	// Space victory
 	int iVictoryStage = AI_calculateSpaceVictoryStage();
 
@@ -19498,7 +19507,7 @@ void CvPlayerAI::AI_updateVictoryStrategyHash()
 				bStartedOtherLevel3 = true;
                 m_iVictoryStrategyHash |= AI_VICTORY_SPACE3;
 
-				if (iVictoryStage > 3 && !bStartedOtherLevel4)
+				if (iVictoryStage > 3 && (bMasteryVictory || !bStartedOtherLevel4))
 				{
 					bStartedOtherLevel4 = true;
                 	m_iVictoryStrategyHash |= AI_VICTORY_SPACE4;
@@ -19521,7 +19530,7 @@ void CvPlayerAI::AI_updateVictoryStrategyHash()
 				bStartedOtherLevel3 = true;
                 m_iVictoryStrategyHash |= AI_VICTORY_CONQUEST3;
 
-				if (iVictoryStage > 3 && !bStartedOtherLevel4)
+				if (iVictoryStage > 3 && (bMasteryVictory || !bStartedOtherLevel4))
 				{
 					bStartedOtherLevel4 = true;
                 	m_iVictoryStrategyHash |= AI_VICTORY_CONQUEST4;
@@ -19544,7 +19553,7 @@ void CvPlayerAI::AI_updateVictoryStrategyHash()
 				bStartedOtherLevel3 = true;
                 m_iVictoryStrategyHash |= AI_VICTORY_DOMINATION3;
 
-				if (iVictoryStage > 3 && !bStartedOtherLevel4)
+				if (iVictoryStage > 3 && (bMasteryVictory || !bStartedOtherLevel4))
 				{
 					bStartedOtherLevel4 = true;
                 	m_iVictoryStrategyHash |= AI_VICTORY_DOMINATION4;
@@ -19593,7 +19602,7 @@ void CvPlayerAI::AI_updateVictoryStrategyHash()
 				bStartedOtherLevel3 = true;
                 m_iVictoryStrategyHash |= AI_VICTORY_DIPLOMACY3;
 
-				if (iVictoryStage > 3 && !bStartedOtherLevel4)
+				if (!bMasteryVictory && iVictoryStage > 3 && !bStartedOtherLevel4)
 				{
 					bStartedOtherLevel4 = true;
                 	m_iVictoryStrategyHash |= AI_VICTORY_DIPLOMACY4;
