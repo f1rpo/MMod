@@ -9450,6 +9450,36 @@ void CvPlayer::changeWorkerSpeedModifier(int iChange)
 	m_iWorkerSpeedModifier = (m_iWorkerSpeedModifier + iChange);
 }
 
+// BUG - Pre-Chop - start  (merged by f1rpo)
+// Returns the work rate for the first unit that can build <eBuild>.
+int CvPlayer::getWorkRate(BuildTypes eBuild) const
+{
+	int iRate = 0;
+	CvCivilizationInfo& kCiv = GC.getCivilizationInfo(getCivilizationType());
+
+	for (int iI = 0; iI < GC.getNumUnitClassInfos(); iI++)
+	{
+		CvUnitInfo& kUnit = GC.getUnitInfo((UnitTypes)kCiv.getCivilizationUnits(iI));
+
+		if (kUnit.getBuilds(eBuild))
+		{
+			iRate = kUnit.getWorkRate();
+			break;
+		}
+	}
+
+	iRate *= std::max(0, getWorkerSpeedModifier() + 100);
+	iRate /= 100;
+
+	if (!isHuman() && !isBarbarian())
+	{
+		iRate *= std::max(0, (GC.getHandicapInfo(GC.getGameINLINE().getHandicapType()).getAIWorkRateModifier() + 100));
+		iRate /= 100;
+	}
+
+	return iRate;
+}
+// BUG - Pre-Chop - end
 
 int CvPlayer::getImprovementUpgradeRateModifier() const
 {

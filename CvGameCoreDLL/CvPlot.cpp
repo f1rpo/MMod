@@ -2581,6 +2581,78 @@ int CvPlot::getBuildTurnsLeft(BuildTypes eBuild, int iNowExtra, int iThenExtra) 
 	return std::max(1, iTurnsLeft);
 }
 
+// BUG - Pre-Chop - start  (merged by f1rpo)
+int CvPlot::getBuildTurnsLeft(BuildTypes eBuild, PlayerTypes ePlayer) const
+{
+	int iWorkRate = GET_PLAYER(ePlayer).getWorkRate(eBuild);
+	if (iWorkRate > 0)
+	{
+		return getBuildTurnsLeftBUG(eBuild, iWorkRate, iWorkRate, false);
+	}
+	else
+	{
+		return MAX_INT;
+	}
+}
+
+
+int CvPlot::getBuildTurnsLeftBUG(BuildTypes eBuild, int iNowExtra, int iThenExtra, bool bIncludeUnits) const
+{
+	CLLNode<IDInfo>* pUnitNode;
+	CvUnit* pLoopUnit;
+	int iNowBuildRate;
+	int iThenBuildRate;
+	int iBuildLeft;
+	int iTurnsLeft;
+
+	iNowBuildRate = iNowExtra;
+	iThenBuildRate = iThenExtra;
+
+	if (bIncludeUnits)
+	{
+		pUnitNode = headUnitNode();
+
+		while (pUnitNode != NULL)
+		{
+			pLoopUnit = ::getUnit(pUnitNode->m_data);
+			pUnitNode = nextUnitNode(pUnitNode);
+
+			if (pLoopUnit->getBuildType() == eBuild)
+			{
+				if (pLoopUnit->canMove())
+				{
+					iNowBuildRate += pLoopUnit->workRate(false);
+				}
+				iThenBuildRate += pLoopUnit->workRate(true);
+			}
+		}
+	}
+
+	if (iThenBuildRate == 0)
+	{
+		//this means it will take forever under current circumstances
+		return MAX_INT;
+	}
+
+	iBuildLeft = getBuildTime(eBuild);
+
+	iBuildLeft -= getBuildProgress(eBuild);
+	iBuildLeft -= iNowBuildRate;
+
+	iBuildLeft = std::max(0, iBuildLeft);
+
+	iTurnsLeft = (iBuildLeft / iThenBuildRate);
+
+	if ((iTurnsLeft * iThenBuildRate) < iBuildLeft)
+	{
+		iTurnsLeft++;
+	}
+
+	iTurnsLeft++;
+
+	return std::max(1, iTurnsLeft);
+}
+// BUG - Pre-Chop - end
 
 int CvPlot::getFeatureProduction(BuildTypes eBuild, TeamTypes eTeam, CvCity** ppCity) const
 {

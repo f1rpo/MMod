@@ -119,6 +119,10 @@ public:
 
 	bool canBuild(BuildTypes eBuild, PlayerTypes ePlayer = NO_PLAYER, bool bTestVisible = false) const;														// Exposed to Python
 	int getBuildTime(BuildTypes eBuild) const;																																										// Exposed to Python
+	// BUG - Pre-Chop - start  (merged by f1rpo)
+	int getBuildTurnsLeft(BuildTypes eBuild, PlayerTypes ePlayer) const;
+	int getBuildTurnsLeftBUG(BuildTypes eBuild, int iNowExtra, int iThenExtra, bool bIncludeUnits) const;
+	// BUG - Pre-Chop - end
 	int getBuildTurnsLeft(BuildTypes eBuild, int iNowExtra, int iThenExtra) const;																			// Exposed to Python
 	int getFeatureProduction(BuildTypes eBuild, TeamTypes eTeam, CvCity** ppCity) const;																// Exposed to Python
 

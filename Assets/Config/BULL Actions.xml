@@ -29,13 +29,6 @@
 			<option id="IgnoreHarmlessBarbarians" key="Ignore Harmless Barbarians" 
 					type="boolean" default="False" dll="2"/>
 		</section>
-		
-		<section id="Workers">
-			<!-- PreChop by EmperorFool -->
-			<option id="PreChopForests" key="Pre Chop Forests" 
-					type="boolean" default="False"/>
-			<option id="PreChopImprovements" key="Pre Chop Improvements" 
-					type="boolean" default="False"/>
-		</section>
+		<!-- f1rpo: Worker actions moved into a separate module -->
 	</options>
 </mod>
