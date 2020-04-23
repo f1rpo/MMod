@@ -8327,11 +8327,11 @@ bool CvPlayer::canConvert(ReligionTypes eReligion) const
 }
 
 
-void CvPlayer::convert(ReligionTypes eReligion)
+void CvPlayer::convert(ReligionTypes eReligion, /* f1rpo: */ bool bForce)
 {
 	int iAnarchyLength;
 
-	if (!canConvert(eReligion))
+	if (!canConvert(eReligion) /* f1rpo: */ && !bForce)
 	{
 		return;
 	}

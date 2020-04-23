@@ -933,7 +933,8 @@ bool CvDeal::startTrade(TradeData trade, PlayerTypes eFromPlayer, PlayerTypes eT
 		break;
 
 	case TRADE_RELIGION:
-		GET_PLAYER(eFromPlayer).convert((ReligionTypes)trade.m_iData);
+		// f1rpo (advc.001v): bForce=true, mirroring the CvPlayer::revolution call above.
+		GET_PLAYER(eFromPlayer).convert((ReligionTypes)trade.m_iData, true);
 
 		if (GET_PLAYER(eFromPlayer).AI_getReligionTimer() < GC.getDefineINT("PEACE_TREATY_LENGTH"))
 		{
