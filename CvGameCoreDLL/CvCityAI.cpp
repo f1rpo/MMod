@@ -11808,15 +11808,18 @@ void CvCityAI::AI_cachePlayerCloseness(int iMaxDistance)
 				}
 
 				int iDistance = stepDistance(getX_INLINE(), getY_INLINE(), pLoopCity->getX_INLINE(), pLoopCity->getY_INLINE());
-				
-				if (area() != pLoopCity->area() )
+				/*  f1rpo (advc.107): No functional change here. It's OK to use a
+					higher search range for cities on other continents; but will have to
+					decrease the distance later on when computing the closeness value. */
+				bool const bSameArea = (area() == pLoopCity->area());
+				if (!bSameArea)
 				{
 					iDistance += 1;
 					iDistance /= 2;
 				}
 				if (iDistance <= iMaxDistance)
 				{
-					if ( getArea() == pLoopCity->getArea() )
+					if (bSameArea)
 					{
 						int iPathDistance = GC.getMap().calculatePathDistance(plot(), pLoopCity->plot());
 						if (iPathDistance > 0)
@@ -11846,7 +11849,10 @@ void CvCityAI::AI_cachePlayerCloseness(int iMaxDistance)
 						{
 							iTempValue /= 4;
 						}
-						
+						// <f1rpo> (advc.107):
+						if (!bSameArea)
+							iTempValue /= (pLoopCity->isCoastal(GC.getMIN_WATER_SIZE_FOR_OCEAN()) ? 2 : 3);
+						// </f1rpo>
 						iValue += iTempValue;					
 						iBestValue = std::max(iBestValue, iTempValue);
 					}
