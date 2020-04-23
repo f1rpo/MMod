@@ -35,6 +35,7 @@
 #include "CvDLLFlagEntityIFaceBase.h"
 #include "BetterBTSAI.h"
 //bbai end
+#include "CvBugOptions.h" // f1rpo
 
 // Public Functions...
 
@@ -10829,6 +10830,9 @@ void CvPlayer::setCombatExperience(int iExperience)
 					}
 				}
 			}
+			// <f1rpo>
+			if(getID() == GC.getGameINLINE().getActivePlayer() && getBugOptionBOOL("MainInterface__Combat_Counter", false))
+				gDLL->getInterfaceIFace()->setDirty(GameData_DIRTY_BIT, true); // </f1rpo>
 		}
 	}
 }
