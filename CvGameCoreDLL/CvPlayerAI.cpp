@@ -3078,7 +3078,9 @@ short CvPlayerAI::AI_foundValue_bulk(int iX, int iY, const CvFoundSettings& kSet
 					if (GC.getBuildInfo((BuildTypes)i).isFeatureRemove(eFeature))
 					{
 						bEventuallyRemoveableFeature = true;
-						if (GET_TEAM(getTeam()).isHasTech((TechTypes)GC.getBuildInfo((BuildTypes)i).getTechPrereq()))
+						if (GET_TEAM(getTeam()).isHasTech((TechTypes)GC.getBuildInfo((BuildTypes)i).getTechPrereq())
+							// f1rpo (bugfix):
+							&& GET_TEAM(getTeam()).isHasTech((TechTypes)GC.getBuildInfo((BuildTypes)i).getFeatureTech(eFeature)))
 						{
 							bRemoveableFeature = true;
 							break;
@@ -3287,18 +3289,26 @@ short CvPlayerAI::AI_foundValue_bulk(int iX, int iY, const CvFoundSettings& kSet
 					((pLoopPlot->isWater() && bIsCoastal) || pLoopPlot->area() == pPlot->area() || pLoopPlot->area()->getCitiesPerPlayer(getID()) > 0))
 				{
 					//iBonusValue = AI_bonusVal(eBonus, 1, true) * ((!kSet.bStartingLoc && (getNumTradeableBonuses(eBonus) == 0) && (paiBonusCount[eBonus] == 1)) ? 80 : 20);
-					// K-Mod
-					int iCount = getNumTradeableBonuses(eBonus) == 0 + viBonusCount[eBonus];
-					int iBonusValue = AI_bonusVal(eBonus, 0, true) * 80 / (1 + 2*iCount);
+					// K-Mod.
+					/*int iCount = getNumTradeableBonuses(eBonus) == 0 + viBonusCount[eBonus];
+					int iBonusValue = AI_bonusVal(eBonus, 0, true) * 80 / (1 + 2*iCount);*/
+					/*	f1rpo: The "==0" above was probably accidentally copied from the original code.
+						But I think we can do better by letting AI_bonusVal handle any bonuses that
+						the player might already have access to (iChange=1). */
+					int iBonusValue = AI_bonusVal(eBonus, 1) * 70 / (1 + viBonusCount[eBonus]);
+
 					// Note: 1. the value of starting bonuses is reduced later.
 					//       2. iTempValue use to be used throughout this section. I've replaced all references with iBonusValue, for clarity.
 					viBonusCount[eBonus]++; // (this use to be above the iBonusValue initialization)
 					FAssert(viBonusCount[eBonus] > 0);
-					//
+					// K-Mod end
 
 					iBonusValue *= (kSet.bStartingLoc ? 100 : kSet.iGreed);
 					iBonusValue /= 100;
-
+					// <f1rpo> (advc.031)
+					if (pLoopPlot->getOwnerINLINE() == getID())
+						iBonusValue = 0; // We've already got it
+					// </f1rpo>
 					if (!kSet.bStartingLoc)
 					{
 						// K-Mod. (original code deleted)
