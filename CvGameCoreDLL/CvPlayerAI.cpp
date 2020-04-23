@@ -18373,8 +18373,10 @@ void CvPlayerAI::AI_doDiplo()
 													if (canTradeItem(((PlayerTypes)iI), item, true))
 													{
 														iValue = (1 + GC.getGameINLINE().getSorenRandNum(100, "AI Tech Trading #2"));
-														
-														iValue *= GET_TEAM(eBestTeam).getResearchLeft((TechTypes)iJ);
+														//iValue *= GET_TEAM(eBestTeam).getResearchLeft((TechTypes)iJ);
+														/*	f1rpo (bugfix) iI is the hireling who will receive the tech.
+															eBestTeam is the target. */
+														iValue *= GET_TEAM((TeamTypes)iI).getResearchLeft((TechTypes)iJ);
 
 														if (iValue > iBestValue)
 														{
@@ -18409,9 +18411,11 @@ void CvPlayerAI::AI_doDiplo()
 															{
 																iValue = (1 + GC.getGameINLINE().getSorenRandNum(100, "AI Tech Trading #2"));
 																
-																iValue *= GET_TEAM(eBestTeam).getResearchLeft((TechTypes)iJ);
-
-																if (iValue > iBestValue)
+																/*iValue *= GET_TEAM(eBestTeam).getResearchLeft((TechTypes)iJ);
+																if (iValue > iBestValue)*/
+																// <f1rpo> (bugfixes)
+																iValue *= GET_TEAM((TeamTypes)iI).getResearchLeft((TechTypes)iJ);
+																if (iValue > iBestValue2) // </f1rpo>
 																{
 																	iBestValue2 = iValue;
 																	eBestGiveTech2 = ((TechTypes)iJ);
