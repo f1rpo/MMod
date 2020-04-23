@@ -6873,10 +6873,11 @@ void CvGame::createBarbarianCities()
 				
 					if (iTargetCitiesMultiplier > 100)
 					{
-						iValue *= pLoopPlot->area()->getNumOwnedTiles();
+						iValue *= /* f1rpo (bugfix): */ std::max(1,
+								pLoopPlot->area()->getNumOwnedTiles());
 					}
-
-					iValue += (100 + getSorenRandNum(50, "Barb City Found"));
+					// f1rpo (bugfix): was +=
+					iValue *= (100 + getSorenRandNum(50, "Barb City Found"));
 					iValue /= 100;
 
 					if (iValue > iBestValue)
