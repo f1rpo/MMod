@@ -1525,7 +1525,9 @@ void CvPlayer::initFreeUnits()
 
 		if (!isHuman())
 		{
-			iPoints *= GC.getHandicapInfo(getHandicapType()).getAIAdvancedStartPercent();
+			iPoints *= GC.getHandicapInfo(//getHandicapType()
+					GC.getGameINLINE().getHandicapType()) // f1rpo (bugfix)
+					.getAIAdvancedStartPercent();
 			iPoints /= 100;
 		}
 
