@@ -6967,7 +6967,8 @@ int CvCityAI::AI_getImprovementValue(CvPlot* pPlot, ImprovementTypes eImprovemen
 		int iTimeScale = 60;
 		iTimeScale += (100*GC.getGameINLINE().getElapsedGameTurns()/GC.getGameINLINE().getEstimateEndTurn() < 30 ? 10 : 0);
 		iTimeScale -= (kOwner.AI_isDoVictoryStrategyLevel4() ? 30 : (100*GC.getGameINLINE().getElapsedGameTurns()/GC.getGameINLINE().getEstimateEndTurn() > 70 ? 10 : 0));
-		iTimeScale += (kOwner.AI_isDoVictoryStrategy(AI_STRATEGY_ECONOMY_FOCUS) ? 50 : 0);
+		// f1rpo (bugfix): was AI_isDoVictoryStrategy
+		iTimeScale += (kOwner.AI_isDoStrategy(AI_STRATEGY_ECONOMY_FOCUS) ? 50 : 0);
 		iTimeScale -= (GET_TEAM(getTeam()).getWarPlanCount(WARPLAN_TOTAL, true) ? 20 : (kOwner.AI_getFlavorValue(FLAVOR_MILITARY) > 0) ? 10 : 0);
 		if (eNonObsoleteBonus != NO_BONUS && !kOwner.doesImprovementConnectBonus(eImprovement, eNonObsoleteBonus))
 			iTimeScale = std::min(30, iTimeScale);
@@ -11577,8 +11578,8 @@ void CvCityAI::AI_updateSpecialYieldMultiplier()
 		{
 			m_aiSpecialYieldMultiplier[YIELD_PRODUCTION] -= 10;
 			m_aiSpecialYieldMultiplier[YIELD_COMMERCE] += 20;
-		}
-		else if (kPlayer.AI_isDoVictoryStrategy(AI_STRATEGY_GET_BETTER_UNITS)) // doesn't stack with ec focus.
+		}  // f1rpo (bugfix): was AI_isDoVictoryStrategy
+		else if (kPlayer.AI_isDoStrategy(AI_STRATEGY_GET_BETTER_UNITS)) // doesn't stack with ec focus.
 		{
 			m_aiSpecialYieldMultiplier[YIELD_COMMERCE] += 20;
 		}
