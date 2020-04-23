@@ -11182,9 +11182,12 @@ int CvPlayerAI::AI_stopTradingTradeVal(TeamTypes eTradeTeam, PlayerTypes ePlayer
 
 	for(pLoopDeal = GC.getGameINLINE().firstDeal(&iLoop); pLoopDeal != NULL; pLoopDeal = GC.getGameINLINE().nextDeal(&iLoop))
 	{
-		if (pLoopDeal->isCancelable(getID()) && !(pLoopDeal->isPeaceDeal()))
+		// f1rpo (bugfix): ePlayer is the one who stops trading
+		if (pLoopDeal->isCancelable(/*getID()*/ ePlayer) && !(pLoopDeal->isPeaceDeal()))
 		{
-			if (GET_PLAYER(pLoopDeal->getFirstPlayer()).getTeam() == GET_PLAYER(ePlayer).getTeam())
+			if (GET_PLAYER(pLoopDeal->getFirstPlayer()).getTeam() == GET_PLAYER(ePlayer).getTeam()
+				// f1rpo (bugfix): Don't count all deals of ePlayer - just those with eTradeTeam
+				&& GET_PLAYER(pLoopDeal->getSecondPlayer()).getTeam() == eTradeTeam)
 			{
 				if (pLoopDeal->getLengthSecondTrades() > 0)
 				{
@@ -11192,7 +11195,9 @@ int CvPlayerAI::AI_stopTradingTradeVal(TeamTypes eTradeTeam, PlayerTypes ePlayer
 				}
 			}
 
-			if (GET_PLAYER(pLoopDeal->getSecondPlayer()).getTeam() == GET_PLAYER(ePlayer).getTeam())
+			if (GET_PLAYER(pLoopDeal->getSecondPlayer()).getTeam() == GET_PLAYER(ePlayer).getTeam()
+				// f1rpo (bugfix):
+				&& GET_PLAYER(pLoopDeal->getFirstPlayer()).getTeam() == eTradeTeam)
 			{
 				if (pLoopDeal->getLengthFirstTrades() > 0)
 				{
