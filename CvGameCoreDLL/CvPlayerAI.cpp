@@ -2529,11 +2529,15 @@ void CvPlayerAI::AI_updateCommerceWeights()
 		pCity->AI_setCultureWeight(iWeight);
 	} // end culture
 
-	//
-	// Espionage weight
-	//
-	{
-		int iWeightThreshold = 0; // For human players, what amount of espionage weight indicates that we care about a civ?
+	AI_setEspionageWeight(AI_calculateEspionageWeight()); // f1rpo: Moved into new function
+	// K-Mod end
+}
+
+// f1rpo: K-Mod code moved from AI_updateCommerceWeights
+int CvPlayerAI::AI_calculateEspionageWeight() const
+{
+	int iWeightThreshold = 0; // For human players, what amount of espionage weight indicates that we care about a civ?
+
 		if (isHuman())
 		{
 			int iTotalWeight = 0;
@@ -2637,10 +2641,9 @@ void CvPlayerAI::AI_updateCommerceWeights()
 				iWeight /= 110;
 			}
 		}
-		AI_setEspionageWeight(iWeight);
-	} // end espionage
+
+	return iWeight;
 }
-// K-Mod
 
 // K-Mod: I've moved the bulk of this function into AI_foundValue_bulk...
 short CvPlayerAI::AI_foundValue(int iX, int iY, int iMinRivalRange, bool bStartingLoc) const
@@ -20755,9 +20758,13 @@ void CvPlayerAI::AI_updateStrategyHash()
 		if (iLastStrategyHash & AI_STRATEGY_BIG_ESPIONAGE || AI_getNumAIUnits(UNITAI_SPY) > 0)
 		{
 			int iTempValue = 0;
-			iTempValue += AI_commerceWeight(COMMERCE_ESPIONAGE) / 8;
+			//iTempValue += AI_commerceWeight(COMMERCE_ESPIONAGE) / 8;
 			// Note: although AI_commerceWeight is doubled for Big Espionage,
 			// the value here is unaffected because the strategy hash has been cleared.
+			/*	f1rpo (bugfix): ^Not true anymore; espionage commerce weight gets cached now.
+				Need to bypass the cache: */
+			iTempValue += AI_calculateEspionageWeight() / 8;
+
 			iTempValue += kTeam.getBestKnownTechScorePercent() < 85 ? 3 : 0;
 			iTempValue += kTeam.getAnyWarPlanCount(true) > kTeam.getAtWarCount(true) ? 2 : 0; // build up espionage before the start of a war
 			if (iWarSuccessRating < 0)
