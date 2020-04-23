@@ -20460,8 +20460,8 @@ bool CvUnitAI::AI_retreatToCity(bool bPrimary, bool bPrioritiseAirlift, int iMax
 	// -- and I've renumbered the passes.
 	CvPlot* pBestPlot = NULL;
 	int iShortestPath = MAX_INT;
-
-	for (int iPass = (getGroup()->canDefend() ? 1 : 0) ; iPass < 3; iPass++)
+	// f1rpo (bugfix): Domain check added; otherwise, plot danger isn't checked for ships.
+	for (int iPass = (getGroup()->canDefend() && getDomainType() == DOMAIN_LAND ? 1 : 0) ; iPass < 3; iPass++)
 	{
 		int iLoop;
 		bool bNeedsAirlift = false;
