@@ -18223,7 +18223,9 @@ bool CvUnitAI::AI_settlerSeaFerry()
 	int iLoop;
 	for (pLoopCity = GET_PLAYER(getOwnerINLINE()).firstCity(&iLoop); pLoopCity != NULL; pLoopCity = GET_PLAYER(getOwnerINLINE()).nextCity(&iLoop))
 	{
-		int iValue = pLoopCity->AI_getWorkersNeeded();
+		int iValue = pLoopCity->AI_getWorkersNeeded()
+				// f1rpo: Just as we subtract AI_totalAreaUnitAIs a few lines below
+				- pLoopCity->AI_getWorkersHave();
 		if (iValue > 0)
 		{
 			iValue -= GET_PLAYER(getOwnerINLINE()).AI_plotTargetMissionAIs(pLoopCity->plot(), MISSIONAI_FOUND, getGroup());
