@@ -3699,8 +3699,12 @@ DenialTypes CvTeamAI::AI_makePeaceTrade(TeamTypes ePeaceTeam, TeamTypes eTeam) c
 	// K-Mod
 	if (AI_refusePeace(ePeaceTeam))
 		return DENIAL_VICTORY;
-
-	if (!GET_PLAYER(getLeaderID()).canContactAndTalk(GET_TEAM(ePeaceTeam).getLeaderID()) || GET_TEAM(ePeaceTeam).AI_refusePeace(getID()))
+	if (!GET_PLAYER(getLeaderID()).canContactAndTalk(GET_TEAM(ePeaceTeam).getLeaderID()))
+	{
+		// f1rpo: CONTACT_THEM isn't helpful if they're not willing to talk
+		return DENIAL_RECENT_CANCEL;
+	}
+	if (GET_TEAM(ePeaceTeam).AI_refusePeace(getID()))
 		return DENIAL_CONTACT_THEM;
 	// K-Mod end
 
