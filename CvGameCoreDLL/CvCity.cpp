@@ -12292,7 +12292,8 @@ void CvCity::popOrder(int iNum, bool bFinish, bool bChoose)
 			// K-Mod. use excess production to build more of the same unit
 			int iToBuild = 1 + iLostProduction / iProductionNeeded;
 			int iBuilt = 0;
-			for (iBuilt = 0; iBuilt < iToBuild; iBuilt++)
+			//for (iBuilt = 0; iBuilt < iToBuild; iBuilt++)
+			do // f1rpo
 			{
 				// original build code
 				pUnit = GET_PLAYER(getOwnerINLINE()).initUnit(eTrainUnit, getX_INLINE(), getY_INLINE(), eTrainAIUnit);
@@ -12339,9 +12340,12 @@ void CvCity::popOrder(int iNum, bool bFinish, bool bChoose)
 					}
 				}
 				// end original build code
-				if (!canTrain(eTrainUnit))
-					break; //  can't build any more.
-			}
+
+				/*if (!canTrain(eTrainUnit))
+					break;*/ //  can't build any more.
+				// <f1rpo> Bugfix: Mustn't leave the loop w/o incrementing iBuilt
+				iBuilt++;
+			} while (iBuilt < iToBuild && canTrain(eTrainUnit)); // </f1rpo>
 			iLostProduction -= iProductionNeeded * (iBuilt-1);
 			FAssert(iLostProduction >= 0);
 
