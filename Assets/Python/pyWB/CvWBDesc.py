@@ -6,6 +6,7 @@
 #
 # Author -	Mustafa Thamer
 #
+# f1rpo (advc.056): Made some changes so that scenario files can be read that were created by a DLL with a smaller player limit than the current DLL
 
 from CvPythonExtensions import *
 import os
@@ -21,9 +22,14 @@ fileencoding = "latin_1"	# aka "iso-8859-1"
 #############
 def getPlayer(idx):
 	"helper function which wraps get player in case of bad index"
-	if (gc.getPlayer(idx).isAlive()):
+	#if (gc.getPlayer(idx).isAlive()):
+	#	return gc.getPlayer(idx)
+	#return None
+	# <f1rpo> Treat invalid civ ids as the Barbarians
+	if idx < gc.getMAX_CIV_TEAMS() and gc.getPlayer(idx).isAlive():
 		return gc.getPlayer(idx)
-	return None
+	return gc.getPlayer(gc.getBARBARIAN_PLAYER())
+	# </f1rpo>
 
 #############
 class CvWBParser:
@@ -434,6 +440,7 @@ class CvPlayerDesc:
 		self.stateReligion = ""
 		self.szStartingEra = ""
 		self.bRandomStartLocation = "false"
+		self.bNeverAlive = False # f1rpo
 
 		self.aaiCivics = []
 		self.aaiAttitudeExtras = []
@@ -646,7 +653,10 @@ class CvPlayerDesc:
 					#print self.aaiCivics
 					#print("Attitudes:")
 					#print self.aaiAttitudeExtras
-					break
+					#break
+					# <f1rpo> Same as in CvTeamDesc.read
+					return True
+		return False # </f1rpo>
 
 #############
 class CvUnitDesc:
@@ -858,8 +868,12 @@ class CvCityDesc:
 	def apply(self):
 		"after reading, this will actually apply the data"
 		player = getPlayer(self.owner)
-		if (player):
-			self.city = player.initCity(self.plotX, self.plotY)
+		# <f1rpo>
+		if player is None:
+			CvUtil.pyPrint("Error: City owner %d not alive" %(self.owner))
+			return # </f1rpo>
+
+		self.city = player.initCity(self.plotX, self.plotY)
 
 		if (self.name != None):
 			self.city.setName(self.name, False)
@@ -895,9 +909,10 @@ class CvCityDesc:
 			self.city.changeFreeSpecialistCount(specialistTypeNum, 1)
 
 		for iPlayerLoop in range(gc.getMAX_CIV_PLAYERS()):
-			iPlayerCulture = self.aiPlayerCulture[iPlayerLoop]
-			if (iPlayerCulture > 0):
-				self.city.setCulture(iPlayerLoop, iPlayerCulture, true)
+			if gc.getPlayer(iPlayerLoop).isEverAlive(): # f1rpo
+				iPlayerCulture = self.aiPlayerCulture[iPlayerLoop]
+				if (iPlayerCulture > 0):
+					self.city.setCulture(iPlayerLoop, iPlayerCulture, true)
 
 		unitTypeNum = CvUtil.findInfoTypeNum(gc.getUnitInfo, gc.getNumUnitInfos(), self.productionUnit)
 		buildingTypeNum = CvUtil.findInfoTypeNum(gc.getBuildingInfo, gc.getNumBuildingInfos(), self.productionBuilding)
@@ -1601,7 +1616,9 @@ class CvWBDesc:
 
 			pPlayer = gc.getPlayer(iPlayerLoop)
 			pWBPlayer = self.playersDesc[iPlayerLoop]
-
+			# <f1rpo>
+			if pWBPlayer.bNeverAlive:
+				continue # </f1rpo>
 			# Random Start Location
 			if (pPlayer.getLeaderType() != -1 and pWBPlayer.bRandomStartLocation != "false"):
 				pPlayer.setStartingPlot(pPlayer.findStartingPlot(true), True)
@@ -1697,7 +1714,7 @@ class CvWBDesc:
 					# Random Start Location
 					if (pWBPlayer.bRandomStartLocation != "false"):
 						pPlayer.setStartingPlot(pPlayer.findStartingPlot(true), True)
-						print("Setting player %d starting location to (%d,%d)", pPlayer.getID(), pPlayer.getStartingPlot().getX(), pPlayer.getStartingPlot().getY())
+						print("Setting player %d starting location to (%d,%d)" % (pPlayer.getID(), pPlayer.getStartingPlot().getX(), pPlayer.getStartingPlot().getY()))
 
 					# Civics
 					for iCivicLoop in range(len(pWBPlayer.aaiCivics)):
@@ -1754,15 +1771,15 @@ class CvWBDesc:
 			# Reveal Fog of War for teams
 			for iTeamLoop in range(gc.getMAX_CIV_TEAMS()):
 				pTeam = gc.getTeam(iTeamLoop)
-				if (pWBPlot.abTeamPlotRevealed[iTeamLoop] == 1):
-
-					pPlot = CyMap().plot(pWBPlot.iX, pWBPlot.iY)
-					pPlot.setRevealed(pTeam.getID(), True, False, TeamTypes.NO_TEAM)
+				if pTeam.isEverAlive(): # f1rpo
+					if (pWBPlot.abTeamPlotRevealed[iTeamLoop] == 1):
+						pPlot = CyMap().plot(pWBPlot.iX, pWBPlot.iY)
+						pPlot.setRevealed(pTeam.getID(), True, False, TeamTypes.NO_TEAM)
 
 		# units
 		for pDesc in self.plotDesc:
 			pDesc.applyUnits()
-
+		CvUtil.pyPrint("applyInitialItems: done") # f1rpo
 		return 0	# ok
 
 	def read(self, fileName):
@@ -1787,25 +1804,39 @@ class CvWBDesc:
 
 		print "Reading game desc"
 		self.gameDesc.read(f)	# read game info
-
 		print "Reading teams desc"
 		filePos = f.tell()
 		self.teamsDesc = []
 		for i in range(gc.getMAX_CIV_TEAMS()):
 			print ("reading team %d" %(i))
 			teamsDesc = CvTeamDesc()
-			if (teamsDesc.read(f)==false):					# read team info
-				f.seek(filePos)								# abort and backup
+			if teamsDesc.read(f)==False:
+				f.seek(filePos)	# abort and backup
 				break
 			self.teamsDesc.append(teamsDesc)
+		# <f1rpo>
+		for i in range(len(self.teamsDesc), gc.getMAX_CIV_TEAMS()):
+			self.teamsDesc.append(CvTeamDesc()) # </f1rpo>
 
 		print "Reading players desc"
+		filePos = f.tell() # f1rpo
 		self.playersDesc = []
 		for i in range(gc.getMAX_CIV_PLAYERS()):
 			playerDesc = CvPlayerDesc()
-			playerDesc.read(f)				# read player info
+			# <f1rpo> Same as for teamsDesc above
+			if playerDesc.read(f)==False:
+				f.seek(filePos)
+				break # </f1rpo>
 			self.playersDesc.append(playerDesc)
-
+		# <f1rpo>
+		for i in range(len(self.playersDesc), gc.getMAX_CIV_PLAYERS()):
+			deadPlayer = CvPlayerDesc()
+			# (Not sure if it's necessary to assign a team)
+			deadPlayer.team = len(self.playersDesc)
+			deadPlayer.isPlayableCiv = 0
+			deadPlayer.neverAlive = True
+			self.playersDesc.append(deadPlayer)
+		# </f1rpo>
 		print "Reading map desc"
 		self.mapDesc.read(f)	# read map info
 
@@ -1830,4 +1861,3 @@ class CvWBDesc:
 		f.close()
 		print ("WB read done\n")
 		return 0
-
