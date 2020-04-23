@@ -16826,7 +16826,11 @@ bool CvUnitAI::AI_pillageRange(int iRange, int iBonusValueThreshold, int iFlags)
 
                         if (pWorkingCity != NULL)
                         {
-                            if (!(pWorkingCity == area()->getTargetCity(getOwnerINLINE())) && canPillage(pLoopPlot))
+                            if ((pWorkingCity != area()->getTargetCity(getOwnerINLINE())
+								/*  f1rpo (bugfix): Barbarians perhaps shouldn't have a target city at all.
+									At any rate, they should not exclude that city from pillaging. */
+								|| isBarbarian())
+								&& canPillage(pLoopPlot))
                             {
                                 if (!(pLoopPlot->isVisibleEnemyUnit(this)))
                                 {
