@@ -16719,8 +16719,15 @@ void CvPlayerAI::AI_doCivics()
 		{
 			int iBestValue;
 			CivicTypes eNewCivic = AI_bestCivic((CivicOptionTypes)iI, &iBestValue);
-
+			//int iTestAnarchy = getCivicAnarchyLength(&aeBestCivic[0]);
+			// <f1rpo> Temporary switch - to compute anarchy length accurately.
+			CivicTypes eOtherCivic = aeBestCivic[iI];
+			if(eOtherCivic == eNewCivic) // Not necessary, but might as well.
+				continue;
+			aeBestCivic[iI] = eNewCivic;
 			int iTestAnarchy = getCivicAnarchyLength(&aeBestCivic[0]);
+			aeBestCivic[iI] = eOtherCivic;
+			// </f1rpo>
 			// using ~30 percent as a rough estimate of revolution cost, and low threshold regardless of anarchy just for a bit of inertia.
 			// reduced threshold if we are already going to have a revolution.
 			int iThreshold = (iTestAnarchy > iAnarchyLength ? (!bFirstPass | bWantSwitch ? 20 : 30) : 5);
