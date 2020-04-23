@@ -14849,7 +14849,7 @@ bool CvUnitAI::AI_exploreRange(int iRange)
 	int iImpassableCount = GET_PLAYER(getOwnerINLINE()).AI_unitImpassableCount(getUnitType());
 
 	const CvTeam& kTeam = GET_TEAM(getTeam()); // K-Mod
-
+	const CvPlayerAI& kOwner = GET_PLAYER(getOwnerINLINE()); // f1rpo
 	for (iDX = -(iSearchRange); iDX <= iSearchRange; iDX++)
 	{
 		for (iDY = -(iSearchRange); iDY <= iSearchRange; iDY++)
@@ -14872,6 +14872,12 @@ bool CvUnitAI::AI_exploreRange(int iRange)
 					if (!(pLoopPlot->isRevealed(getTeam(), false)))
 					{
 						iValue += 10000;
+						// <f1rpo> (advc.031d)
+						for (int i = 0; i < kOwner.AI_getNumCitySites(); i++)
+						{
+							int iDist = plotDistance(kOwner.AI_getCitySite(i), pLoopPlot);
+							iValue += 1600 * std::max(0, 4 - iDist);
+						} // </f1rpo>
 					}
 
 					// K-Mod. Try to meet teams that we have seen through map trading
