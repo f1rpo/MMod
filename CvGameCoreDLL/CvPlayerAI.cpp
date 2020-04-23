@@ -10974,8 +10974,12 @@ int CvPlayerAI::AI_cityTradeVal(CvCity* pCity) const
 	iValue += pCity->getPopulation()*20 + pCity->getHighestPopulation()*30; // K-Mod
 
 	iValue += (pCity->getCultureLevel() * 200);
-	iValue += 200 * pCity->getCultureLevel() * pCity->getCulture(getID()) / std::max(1, pCity->getCulture(pCity->getOwnerINLINE())); // K-Mod
-
+	{
+		int iTotalCityCulture = pCity->getCulture(pCity->getOwnerINLINE())
+				// f1rpo (bugfix): So that at most 200*CultureLevel gets added below
+				+ pCity->getCulture(getID());
+		iValue += 200 * pCity->getCultureLevel() * pCity->getCulture(getID()) / std::max(1, iTotalCityCulture); // K-Mod
+	}
 	//iValue += (((((pCity->getPopulation() * 50) + GC.getGameINLINE().getElapsedGameTurns() + 100) * 4) * pCity->plot()->calculateCulturePercent(pCity->getOwnerINLINE())) / 100);
 	// K-Mod
 	int iCityTurns = GC.getGameINLINE().getGameTurn() - (pCity->getGameTurnFounded() + pCity->getGameTurnAcquired())/2;
