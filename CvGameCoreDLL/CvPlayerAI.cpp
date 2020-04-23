@@ -4381,7 +4381,8 @@ bool CvPlayerAI::AI_getAnyPlotDanger(CvPlot* pPlot, int iRange, bool bTestMoves,
 							{
 								if (!(pLoopUnit->isInvisible(eTeam, false)))
 								{
-								    if (pLoopUnit->canMoveOrAttackInto(pPlot))
+								    if (pLoopUnit->canMoveOrAttackInto(pPlot,
+										false, false)) // f1rpo (advc.001k)
 								    {
                                         if (!bTestMoves)
                                         {
@@ -4515,7 +4516,8 @@ int CvPlayerAI::AI_getPlotDanger(CvPlot* pPlot, int iRange, bool bTestMoves) con
 							{
 								if (!(pLoopUnit->isInvisible(eTeam, false)))
 								{
-								    if (pLoopUnit->canMoveOrAttackInto(pPlot))
+								    if (pLoopUnit->canMoveOrAttackInto(pPlot,
+										false, false)) // f1rpo (advc.001k)
 								    {
                                         if (!bTestMoves)
                                         {
@@ -24600,7 +24602,8 @@ bool CvPlayerAI::AI_isPlotThreatened(CvPlot* pPlot, int iRange, bool bTestMoves)
 						CvUnit* pLoopUnit = ::getUnit(pUnitNode->m_data);
 						if (pLoopUnit->isEnemy(getTeam()) && pLoopUnit->canAttack() && !pLoopUnit->isInvisible(getTeam(), false))
 						{
-							if (pLoopUnit->canMoveOrAttackInto(pPlot))
+							if (pLoopUnit->canMoveOrAttackInto(pPlot,
+								false, false)) // f1rpo (advc.001k)
 							{
 								int iPathTurns = 0;
 								if (bTestMoves)

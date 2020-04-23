@@ -2437,7 +2437,8 @@ bool CvUnit::willRevealByMove(const CvPlot* pPlot) const
 }
 
 // K-Mod. I've rearranged a few things to make the function slightly faster, and added "bAssumeVisible" which signals that we should check for units on the plot regardless of whether we can actually see.
-bool CvUnit::canMoveInto(const CvPlot* pPlot, bool bAttack, bool bDeclareWar, bool bIgnoreLoad, bool bAssumeVisible) const
+bool CvUnit::canMoveInto(const CvPlot* pPlot, bool bAttack, bool bDeclareWar, bool bIgnoreLoad, bool bAssumeVisible,
+	bool bCheckMadeAttack) const // f1rpo (advc.001k)
 {
 	PROFILE_FUNC();
 
@@ -2639,7 +2640,7 @@ bool CvUnit::canMoveInto(const CvPlot* pPlot, bool bAttack, bool bDeclareWar, bo
 
 	// The following change makes it possible to capture defenseless units after having 
 	// made a previous attack or paradrop
-	if (bAttack)
+	if (bAttack /* f1rpo (advc.001k): */ && bCheckMadeAttack)
 	{
 		if (isMadeAttack() && !isBlitz() && pPlot->isVisibleEnemyDefender(this))
 		{
@@ -2802,9 +2803,11 @@ bool CvUnit::canMoveInto(const CvPlot* pPlot, bool bAttack, bool bDeclareWar, bo
 }
 
 
-bool CvUnit::canMoveOrAttackInto(const CvPlot* pPlot, bool bDeclareWar) const
+bool CvUnit::canMoveOrAttackInto(const CvPlot* pPlot, bool bDeclareWar,
+	bool bCheckMadeAttack) const // f1rpo (advc.001k)
 {
-	return (canMoveInto(pPlot, false, bDeclareWar) || canMoveInto(pPlot, true, bDeclareWar));
+	return (canMoveInto(pPlot, false, bDeclareWar) || canMoveInto(pPlot, true, bDeclareWar,
+			false, true, bCheckMadeAttack)); // f1rpo (advc.001k)
 }
 
 
