@@ -2756,7 +2756,8 @@ int CvTeam::countEnemyCitiesByArea(CvArea* pArea) const
 		if (kLoopPlayer.isAlive() && AI_getWarPlan(kLoopPlayer.getTeam()) != NO_WARPLAN)
 			iCount += pArea->getCitiesPerPlayer(i);
 	}
-	return 0;
+	//return 0;
+	return iCount; // firpo (bugfix)
 }
 // K-Mod end
 
