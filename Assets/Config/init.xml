@@ -152,6 +152,8 @@
 	
 	<load mod="BULL Core"/>
 	<load mod="BULL Actions"/>
+	<!-- f1rpo: Moved into a separate module -->
+	<load mod="BULL WorkerActions"/>
 	<load mod="BULL City Bar"/>
 	<load mod="BULL Misc Hovers"/>
 	
