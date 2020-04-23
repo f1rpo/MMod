@@ -13,6 +13,12 @@
 #include "CvDLLUtilityIFaceBase.h"
 #include "CvGlobals.h"	// for gDLL
 
+// <f1rpo> I don't think the internal profiler can work w/o the standard profiler
+#ifdef USE_INTERNAL_PROFILER
+#define FP_PROFILE_ENABLE
+#endif
+// </f1rpo>
+
 
 //NOTE: This struct must be identical ot the same struct in  FireEngine/FProfiler.h if the
 //standard profiler is being used (USE_INTERNAL_PROFILER not defined)
