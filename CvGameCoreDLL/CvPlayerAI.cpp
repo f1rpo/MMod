@@ -6238,7 +6238,7 @@ int CvPlayerAI::AI_techValue(TechTypes eTech, int iPathLength, bool bFreeTech, b
 
 
 	/* ------------------ Building Value  ------------------ */
-	bool bEnablesWonder;
+	bool bEnablesWonder /* f1rpo: */ = false;
 	iValue += AI_techBuildingValue(eTech, bAsync, bEnablesWonder); // changed by K-Mod
 	iValue -= AI_obsoleteBuildingPenalty(eTech, bAsync); // K-Mod!
 
@@ -6818,6 +6818,7 @@ int CvPlayerAI::AI_techBuildingValue(TechTypes eTech, bool bConstCache, bool& bE
 {
 	PROFILE_FUNC();
 	FAssertMsg(!isAnarchy(), "AI_techBuildingValue should not be used while in anarchy. Results will be inaccurate.");
+	bEnablesWonder = false; // f1rpo (bugfix): Don't rely on caller to initialize this
 
 	int iTotalValue = 0;
 	std::vector<const CvCity*> relevant_cities; // (this will be populated when we find a building that needs to be evaluated)
