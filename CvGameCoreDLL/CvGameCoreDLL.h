@@ -237,7 +237,7 @@ namespace python = boost::python;
 #include "FDataStreamBase.h"
 #include "FFreeListArrayBase.h"
 #include "FFreeListTrashArray.h"
-#include "FFreeListArray.h"
+//#include "FFreeListArray.h" // f1rpo
 //#include "FVariableSystem.h"
 #include "CvString.h"
 #include "CvEnums.h"

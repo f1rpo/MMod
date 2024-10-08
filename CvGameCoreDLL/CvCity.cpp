@@ -3278,7 +3278,8 @@ int CvCity::getProductionDifference(int iProductionNeeded, int iProduction, int 
 		return 0;
 	}
 
-	int iFoodProduction = bFoodProduction ? std::max(0, getYieldRate(YIELD_FOOD) - foodConsumption()) : 0;
+	int iFoodProduction = bFoodProduction ?
+			std::max(0, getYieldRate(YIELD_FOOD) - foodConsumption(/* f1rpo (bugfix): bNoAngry=*/true)) : 0;
 
 	int iOverflow = ((bOverflow) ? (getOverflowProduction() + getFeatureProduction()) : 0);
 
@@ -5060,8 +5061,8 @@ int CvCity::cultureGarrison(PlayerTypes ePlayer) const
 	{
 		pLoopUnit = ::getUnit(pUnitNode->m_data);
 		pUnitNode = plot()->nextUnitNode(pUnitNode);
-
-		iGarrison += pLoopUnit->getUnitInfo().getCultureGarrisonValue();
+		if (pLoopUnit->getTeam() == getTeam()) // f1rpo
+			iGarrison += pLoopUnit->getUnitInfo().getCultureGarrisonValue();
 	}
 
 	if (atWar(GET_PLAYER(ePlayer).getTeam(), getTeam()))
@@ -8139,7 +8140,9 @@ void CvCity::setWeLoveTheKingDay(bool bNewValue)
 		m_bWeLoveTheKingDay = bNewValue;
 
 		updateMaintenance();
-
+		// <f1rpo> Bugfix: Don't show the message when celebrations end
+		if (!isWeLoveTheKingDay())
+			return; // </f1rpo>
 		eCivic = NO_CIVIC;
 
 		for (iI = 0; iI < GC.getNumCivicInfos(); iI++)
@@ -12292,7 +12295,8 @@ void CvCity::popOrder(int iNum, bool bFinish, bool bChoose)
 			// K-Mod. use excess production to build more of the same unit
 			int iToBuild = 1 + iLostProduction / iProductionNeeded;
 			int iBuilt = 0;
-			for (iBuilt = 0; iBuilt < iToBuild; iBuilt++)
+			//for (iBuilt = 0; iBuilt < iToBuild; iBuilt++)
+			do // f1rpo
 			{
 				// original build code
 				pUnit = GET_PLAYER(getOwnerINLINE()).initUnit(eTrainUnit, getX_INLINE(), getY_INLINE(), eTrainAIUnit);
@@ -12339,9 +12343,12 @@ void CvCity::popOrder(int iNum, bool bFinish, bool bChoose)
 					}
 				}
 				// end original build code
-				if (!canTrain(eTrainUnit))
-					break; //  can't build any more.
-			}
+
+				/*if (!canTrain(eTrainUnit))
+					break;*/ //  can't build any more.
+				// <f1rpo> Bugfix: Mustn't leave the loop w/o incrementing iBuilt
+				iBuilt++;
+			} while (iBuilt < iToBuild && canTrain(eTrainUnit)); // </f1rpo>
 			iLostProduction -= iProductionNeeded * (iBuilt-1);
 			FAssert(iLostProduction >= 0);
 

@@ -3931,7 +3931,10 @@ void CvUnitAI::AI_pillageMove()
 		return;
 	}
 
-	if( !isHuman() && plot()->isCoastalLand() && GET_PLAYER(getOwnerINLINE()).AI_unitTargetMissionAIs(this, MISSIONAI_PICKUP) > 0 )
+	if (!isHuman() && plot()->isCoastalLand() && GET_PLAYER(getOwnerINLINE()).AI_unitTargetMissionAIs(this, MISSIONAI_PICKUP) > 0
+		 /*  f1rpo (advc.046): SKIP w/o setting eMissionAI would make the group
+			 forget that it's stranded, and then AI_pickupStranded won't find it. */
+		&& !getGroup()->isStranded())
 	{
 		getGroup()->pushMission(MISSION_SKIP);
 		return;
@@ -11025,7 +11028,10 @@ CvUnit* CvUnitAI::AI_findTransport(UnitAITypes eUnitAI, int iFlags, int iMaxPath
 						if ((iMaxCargoSpace == -1) || (iCargoSpaceAvailable <= iMaxCargoSpace))
 						{
 							if ((iMaxCargoOurUnitAI == -1) || (pLoopUnit->getUnitAICargo(AI_getUnitAIType()) <= iMaxCargoOurUnitAI))
-							{
+							{	// <f1rpo> (advc.046) Don't join a mission to nowhere
+								CvUnit const* u = pLoopUnit->getGroup()->AI_getMissionAIUnit();
+								if(u != NULL && u->plot()->getTeam() != getTeam() && u->plot() != plot())
+									continue; // </f1rpo>
 								if (!(pLoopUnit->plot()->isVisibleEnemyUnit(this)))
 								{
 									CvPlot* pUnitTargetPlot = pLoopUnit->getGroup()->AI_getMissionAIPlot();
@@ -14849,7 +14855,7 @@ bool CvUnitAI::AI_exploreRange(int iRange)
 	int iImpassableCount = GET_PLAYER(getOwnerINLINE()).AI_unitImpassableCount(getUnitType());
 
 	const CvTeam& kTeam = GET_TEAM(getTeam()); // K-Mod
-
+	const CvPlayerAI& kOwner = GET_PLAYER(getOwnerINLINE()); // f1rpo
 	for (iDX = -(iSearchRange); iDX <= iSearchRange; iDX++)
 	{
 		for (iDY = -(iSearchRange); iDY <= iSearchRange; iDY++)
@@ -14872,6 +14878,12 @@ bool CvUnitAI::AI_exploreRange(int iRange)
 					if (!(pLoopPlot->isRevealed(getTeam(), false)))
 					{
 						iValue += 10000;
+						// <f1rpo> (advc.031d)
+						for (int i = 0; i < kOwner.AI_getNumCitySites(); i++)
+						{
+							int iDist = plotDistance(kOwner.AI_getCitySite(i), pLoopPlot);
+							iValue += 1600 * std::max(0, 4 - iDist);
+						} // </f1rpo>
 					}
 
 					// K-Mod. Try to meet teams that we have seen through map trading
@@ -15069,7 +15081,12 @@ CvCity* CvUnitAI::AI_pickTargetCity(int iFlags, int iMaxPathTurns, bool bHuntBar
 								int iOffenceEnRoute = kOwner.AI_cityTargetStrengthByPath(pLoopCity, getGroup(), iPathTurns);
 								if (pLoopCity->isVisible(getTeam(), false))
 								{
-									iEnemyDefence = kOwner.AI_localDefenceStrength(pLoopCity->plot(), NO_TEAM, DOMAIN_LAND, true, iPathTurns > 1 ? 2 : 0);
+									iEnemyDefence = kOwner.AI_localDefenceStrength(
+											pLoopCity->plot(), NO_TEAM, DOMAIN_LAND,
+											/*	f1rpo (bugfix): Probably a remnant of
+												bDefensiveBonuses=true in BBAI's AI_getEnemyPlotStrength. */
+											//true,
+											iPathTurns > 1 ? 2 : 0);
 
 									if (iPathTurns > 2)
 									{
@@ -16826,7 +16843,11 @@ bool CvUnitAI::AI_pillageRange(int iRange, int iBonusValueThreshold, int iFlags)
 
                         if (pWorkingCity != NULL)
                         {
-                            if (!(pWorkingCity == area()->getTargetCity(getOwnerINLINE())) && canPillage(pLoopPlot))
+                            if ((pWorkingCity != area()->getTargetCity(getOwnerINLINE())
+								/*  f1rpo (bugfix): Barbarians perhaps shouldn't have a target city at all.
+									At any rate, they should not exclude that city from pillaging. */
+								|| isBarbarian())
+								&& canPillage(pLoopPlot))
                             {
                                 if (!(pLoopPlot->isVisibleEnemyUnit(this)))
                                 {
@@ -18219,7 +18240,9 @@ bool CvUnitAI::AI_settlerSeaFerry()
 	int iLoop;
 	for (pLoopCity = GET_PLAYER(getOwnerINLINE()).firstCity(&iLoop); pLoopCity != NULL; pLoopCity = GET_PLAYER(getOwnerINLINE()).nextCity(&iLoop))
 	{
-		int iValue = pLoopCity->AI_getWorkersNeeded();
+		int iValue = pLoopCity->AI_getWorkersNeeded()
+				// f1rpo: Just as we subtract AI_totalAreaUnitAIs a few lines below
+				- pLoopCity->AI_getWorkersHave();
 		if (iValue > 0)
 		{
 			iValue -= GET_PLAYER(getOwnerINLINE()).AI_plotTargetMissionAIs(pLoopCity->plot(), MISSIONAI_FOUND, getGroup());
@@ -20456,8 +20479,8 @@ bool CvUnitAI::AI_retreatToCity(bool bPrimary, bool bPrioritiseAirlift, int iMax
 	// -- and I've renumbered the passes.
 	CvPlot* pBestPlot = NULL;
 	int iShortestPath = MAX_INT;
-
-	for (int iPass = (getGroup()->canDefend() ? 1 : 0) ; iPass < 3; iPass++)
+	// f1rpo (bugfix): Domain check added; otherwise, plot danger isn't checked for ships.
+	for (int iPass = (getGroup()->canDefend() && getDomainType() == DOMAIN_LAND ? 1 : 0) ; iPass < 3; iPass++)
 	{
 		int iLoop;
 		bool bNeedsAirlift = false;
@@ -22219,8 +22242,14 @@ bool CvUnitAI::AI_exploreAir()
 /************************************************************************************************/
 int CvUnitAI::AI_exploreAirPlotValue( CvPlot* pPlot )
 {
+	// <f1rpo> Don't cheat with visibility (no need)
+	CvTeam const& kOurTeam = GET_TEAM(getTeam());
+	if (!pPlot->isRevealed(kOurTeam.getID(), false))
+		return 50; // </f1rpo>
 	int iValue = 0;
-	if (pPlot->isVisible(getTeam(), false))
+	//if (pPlot->isVisible(getTeam(), false))
+	// f1rpo (bugfix): We're _not_ interested in exploring visible tiles
+	if (!pPlot->isVisible(kOurTeam.getID(), false))
 	{
 		iValue++;
 
@@ -22271,7 +22300,9 @@ bool CvUnitAI::AI_exploreAir2()
 						for (int iI = 0; iI < NUM_DIRECTION_TYPES; iI++)
 						{
 							DirectionTypes eDirection = (DirectionTypes) iI;
-							CvPlot* pAdjacentPlot = plotDirection(getX_INLINE(), getY_INLINE(), eDirection);
+							//CvPlot* pAdjacentPlot = plotDirection(getX_INLINE(), getY_INLINE(), eDirection);
+							// f1rpo (bugfix):
+							CvPlot* pAdjacentPlot = plotDirection(pLoopPlot->getX_INLINE(), pLoopPlot->getY_INLINE(), eDirection);
 							if (pAdjacentPlot != NULL)
 							{
 								if( !pAdjacentPlot->isVisible(getTeam(),false) )

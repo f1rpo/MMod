@@ -102,6 +102,10 @@ from CvPythonExtensions import *
 import CvEventManager
 import BugData
 import BugUtil
+# <f1rpo> (advc.007b)
+import CvUtil
+import CvScreensInterface
+# </f1rpo>
 import InputUtil
 import types
 
@@ -459,13 +463,62 @@ class BugEventManager(CvEventManager.CvEventManager):
 		Handles onKbdEvent by firing the keystroke's handler if it has one registered.
 		"""
 		eventType, key, mx, my, px, py = argsList
-		if eventType == self.EventKeyDown:
-			if not InputUtil.isModifier(key):
-				stroke = InputUtil.Keystroke(key, self.bAlt, self.bCtrl, self.bShift)
-				if stroke in self.shortcuts:
-					BugUtil.debug("BugEventManager - calling handler for shortcut %s", stroke)
-					self.shortcuts[stroke](argsList)
+		if eventType == self.EventKeyDown and not InputUtil.isModifier(key):
+			# <f1rpo> (advc.007b)
+			# Added not bCtrl/bAlt/bShift checks so that each cheat is triggered by only one combination of modifier keys
+			theKey = int(key)
+			if not self.bShift and self.bCtrl and self.bAlt and theKey == int(InputTypes.KB_R):
+				BugUtil.warn("Note (K-Mod): Reloading of Art Defines (Ctrl+Alt+R) is disabled")
+				return 1 # Don't use this key combination for anything else
+			# </f1rpo>
+			stroke = InputUtil.Keystroke(key, self.bAlt, self.bCtrl, self.bShift)
+			if stroke in self.shortcuts:
+				BugUtil.debug("BugEventManager - calling handler for shortcut %s", stroke)
+				self.shortcuts[stroke](argsList)
+				return 1
+			# <f1rpo> (advc.007b) Cheats copied from CvEventManager
+			if gc.getGame().isDebugMode():
+				# Shift - T Debug - techs
+				if self.bShift and not self.bCtrl and not self.bAlt and theKey == int(InputTypes.KB_T):
+					self.beginEvent(CvUtil.EventAwardTechsAndGold)
 					return 1
+				elif self.bShift and self.bCtrl and not self.bAlt and theKey == int(InputTypes.KB_W):
+					self.beginEvent(CvUtil.EventShowWonder)
+					return 1
+				# Shift - ] Debug - currently mouse-over'd unit: health+=10
+				elif theKey == int(InputTypes.KB_LBRACKET) and self.bShift and not self.bCtrl and not self.bAlt:
+					unit = CyMap().plot(px, py).getUnit(0)
+					if not unit.isNone():
+						d = min(unit.maxHitPoints()-1, unit.getDamage() + 10)
+						unit.setDamage(d, PlayerTypes.NO_PLAYER)
+				# Shift - [ Debug - currently mouse-over'd unit: health-= 10
+				elif theKey == int(InputTypes.KB_RBRACKET) and self.bShift and not self.bCtrl and not self.bAlt:
+					unit = CyMap().plot(px, py).getUnit(0)
+					if not unit.isNone():
+						d = max(0, unit.getDamage() - 10)
+						unit.setDamage(d, PlayerTypes.NO_PLAYER)
+				# <advc.gfd> Keep Nightinggale's key combination
+				elif theKey == int(InputTypes.KB_F1) and self.bShift and self.bCtrl and not self.bAlt:
+					GameFontDisplay.GameFontDisplay().interfaceScreen()
+					return 1 # </advc.gfd>
+				elif theKey == int(InputTypes.KB_F1):
+					if self.bShift and not self.bCtrl and not self.bAlt:
+						CvScreensInterface.replayScreen.showScreen(False)
+						return 1
+				elif theKey == int(InputTypes.KB_F2):
+					if self.bShift and not self.bCtrl and not self.bAlt:
+						import CvDebugInfoScreen
+						CvScreensInterface.showDebugInfoScreen()
+						return 1
+				elif theKey == int(InputTypes.KB_F3):
+					if self.bShift and not self.bCtrl and not self.bAlt:
+						CvScreensInterface.showDanQuayleScreen(())
+						return 1
+				elif theKey == int(InputTypes.KB_F4):
+					if self.bShift and not self.bCtrl and not self.bAlt:
+						CvScreensInterface.showUnVictoryScreen(())
+						return 1
+				# </f1rpo>
 		return 0
 	
 

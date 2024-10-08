@@ -6967,7 +6967,8 @@ int CvCityAI::AI_getImprovementValue(CvPlot* pPlot, ImprovementTypes eImprovemen
 		int iTimeScale = 60;
 		iTimeScale += (100*GC.getGameINLINE().getElapsedGameTurns()/GC.getGameINLINE().getEstimateEndTurn() < 30 ? 10 : 0);
 		iTimeScale -= (kOwner.AI_isDoVictoryStrategyLevel4() ? 30 : (100*GC.getGameINLINE().getElapsedGameTurns()/GC.getGameINLINE().getEstimateEndTurn() > 70 ? 10 : 0));
-		iTimeScale += (kOwner.AI_isDoVictoryStrategy(AI_STRATEGY_ECONOMY_FOCUS) ? 50 : 0);
+		// f1rpo (bugfix): was AI_isDoVictoryStrategy
+		iTimeScale += (kOwner.AI_isDoStrategy(AI_STRATEGY_ECONOMY_FOCUS) ? 50 : 0);
 		iTimeScale -= (GET_TEAM(getTeam()).getWarPlanCount(WARPLAN_TOTAL, true) ? 20 : (kOwner.AI_getFlavorValue(FLAVOR_MILITARY) > 0) ? 10 : 0);
 		if (eNonObsoleteBonus != NO_BONUS && !kOwner.doesImprovementConnectBonus(eImprovement, eNonObsoleteBonus))
 			iTimeScale = std::min(30, iTimeScale);
@@ -6977,7 +6978,13 @@ int CvCityAI::AI_getImprovementValue(CvPlot* pPlot, ImprovementTypes eImprovemen
 		// Adjustments to match calculation in CvPlot::doImprovementUpgrade.
 		iTimeScale = iTimeScale * GC.getGameSpeedInfo(GC.getGameINLINE().getGameSpeedType()).getImprovementPercent()/100;
 		iTimeScale = iTimeScale * GC.getEraInfo(GC.getGameINLINE().getStartEra()).getImprovementPercent()/100;
-		iTimeScale = iTimeScale / kOwner.getImprovementUpgradeRate();
+		//iTimeScale = iTimeScale / kOwner.getImprovementUpgradeRate();
+		/*	f1rpo (bugfix): ImprovementUpgradeRate is not applied to the
+			ImprovementUpgradeTime but to the UpgradeProgress, i.e.
+			the opposite side of the equation.
+			Faster upgrade should make us more interested in delayed rewards,
+			which is what an increased time scale accomplishes. */
+		iTimeScale *= kOwner.getImprovementUpgradeRate();
 
 		std::vector<float> weighted_final_yields(NUM_YIELD_TYPES);
 		std::vector<float> weighted_yield_diffs(NUM_YIELD_TYPES);
@@ -11149,7 +11156,8 @@ int CvCityAI::AI_getPlotMagicValue(CvPlot* pPlot, bool bHealthy, bool bWorkerOpt
 	{
 		if (bFinalBuildAssumed)
 		{
-			aiYields[iI] = pPlot->getYieldWithBuild(AI_getBestBuild(getCityPlotIndex(pPlot)), (YieldTypes)iI, true);
+			aiYields[iI] = pPlot->getYieldWithBuild(AI_getBestBuild(getCityPlotIndex(pPlot)), (YieldTypes)iI, true)
+					* 100; // f1rpo (bugfix): Same scale as in else branch
 		}
 		else
 		{
@@ -11576,8 +11584,8 @@ void CvCityAI::AI_updateSpecialYieldMultiplier()
 		{
 			m_aiSpecialYieldMultiplier[YIELD_PRODUCTION] -= 10;
 			m_aiSpecialYieldMultiplier[YIELD_COMMERCE] += 20;
-		}
-		else if (kPlayer.AI_isDoVictoryStrategy(AI_STRATEGY_GET_BETTER_UNITS)) // doesn't stack with ec focus.
+		}  // f1rpo (bugfix): was AI_isDoVictoryStrategy
+		else if (kPlayer.AI_isDoStrategy(AI_STRATEGY_GET_BETTER_UNITS)) // doesn't stack with ec focus.
 		{
 			m_aiSpecialYieldMultiplier[YIELD_COMMERCE] += 20;
 		}
@@ -11808,15 +11816,18 @@ void CvCityAI::AI_cachePlayerCloseness(int iMaxDistance)
 				}
 
 				int iDistance = stepDistance(getX_INLINE(), getY_INLINE(), pLoopCity->getX_INLINE(), pLoopCity->getY_INLINE());
-				
-				if (area() != pLoopCity->area() )
+				/*  f1rpo (advc.107): No functional change here. It's OK to use a
+					higher search range for cities on other continents; but will have to
+					decrease the distance later on when computing the closeness value. */
+				bool const bSameArea = (area() == pLoopCity->area());
+				if (!bSameArea)
 				{
 					iDistance += 1;
 					iDistance /= 2;
 				}
 				if (iDistance <= iMaxDistance)
 				{
-					if ( getArea() == pLoopCity->getArea() )
+					if (bSameArea)
 					{
 						int iPathDistance = GC.getMap().calculatePathDistance(plot(), pLoopCity->plot());
 						if (iPathDistance > 0)
@@ -11846,7 +11857,10 @@ void CvCityAI::AI_cachePlayerCloseness(int iMaxDistance)
 						{
 							iTempValue /= 4;
 						}
-						
+						// <f1rpo> (advc.107):
+						if (!bSameArea)
+							iTempValue /= (pLoopCity->isCoastal(GC.getMIN_WATER_SIZE_FOR_OCEAN()) ? 2 : 3);
+						// </f1rpo>
 						iValue += iTempValue;					
 						iBestValue = std::max(iBestValue, iTempValue);
 					}

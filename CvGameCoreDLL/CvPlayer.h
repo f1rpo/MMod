@@ -292,17 +292,19 @@ public:
 
 	bool isCivic(CivicTypes eCivic) const;																																// Exposed to Python
 	bool canDoCivics(CivicTypes eCivic) const;																														// Exposed to Python
-	DllExport bool canRevolution(CivicTypes* paeNewCivics) const;																					// Exposed to Python
-	DllExport void revolution(CivicTypes* paeNewCivics, bool bForce = false);												// Exposed to Python
+	bool canRevolution(CivicTypes* paeNewCivics) const;																					// Exposed to Python
+	void revolution(CivicTypes* paeNewCivics, bool bForce = false);												// Exposed to Python
 	int getCivicPercentAnger(CivicTypes eCivic, bool bIgnore = false) const;																										// Exposed to Python
 
 	bool canDoReligion(ReligionTypes eReligion) const;																										// Exposed to Python
 	bool canChangeReligion() const;																																				// Exposed to Python
-	DllExport bool canConvert(ReligionTypes eReligion) const;																							// Exposed to Python
-	DllExport void convert(ReligionTypes eReligion);																								// Exposed to Python
+	bool canConvert(ReligionTypes eReligion) const;																							// Exposed to Python
+	/*	f1rpo: bForce added, DllExport removed
+		(also from the other civc/ religion functions; the EXE doesn't call them). */
+	void convert(ReligionTypes eReligion, bool bForce = false);																					// Exposed to Python
 	bool hasHolyCity(ReligionTypes eReligion) const;																											// Exposed to Python
 	int countHolyCities() const;																																					// Exposed to Python
-	DllExport void foundReligion(ReligionTypes eReligion, ReligionTypes eSlotReligion, bool bAward);																										// Exposed to Python
+	void foundReligion(ReligionTypes eReligion, ReligionTypes eSlotReligion, bool bAward);																										// Exposed to Python
 
 	bool hasHeadquarters(CorporationTypes eCorporation) const;																											// Exposed to Python
 	int countHeadquarters() const;																																					// Exposed to Python
@@ -448,6 +450,7 @@ public:
 
 	int getWorkerSpeedModifier() const;																																		// Exposed to Python
 	void changeWorkerSpeedModifier(int iChange);
+	int getWorkRate(BuildTypes eBuild) const; // BUG - Pre-Chop  (merged by f1rpo)
 
 	int getImprovementUpgradeRateModifier() const;																									// Exposed to Python
 	void changeImprovementUpgradeRateModifier(int iChange);

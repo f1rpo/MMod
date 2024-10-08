@@ -544,6 +544,7 @@ protected:
 	inline int AI_getStrategyHash() const { return m_iStrategyHash; }
 	void AI_updateStrategyHash();
 	void AI_calculateAverages();
+	int AI_calculateEspionageWeight() const; // f1rpo
 
 	void AI_convertUnitAITypesForCrush();
 	int AI_eventValue(EventTypes eEvent, const EventTriggeredData& kTriggeredData) const;

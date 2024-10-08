@@ -35,6 +35,7 @@
 #include "CvDLLFlagEntityIFaceBase.h"
 #include "BetterBTSAI.h"
 //bbai end
+#include "CvBugOptions.h" // f1rpo
 
 // Public Functions...
 
@@ -1525,7 +1526,9 @@ void CvPlayer::initFreeUnits()
 
 		if (!isHuman())
 		{
-			iPoints *= GC.getHandicapInfo(getHandicapType()).getAIAdvancedStartPercent();
+			iPoints *= GC.getHandicapInfo(//getHandicapType()
+					GC.getGameINLINE().getHandicapType()) // f1rpo (bugfix)
+					.getAIAdvancedStartPercent();
 			iPoints /= 100;
 		}
 
@@ -8333,11 +8336,11 @@ bool CvPlayer::canConvert(ReligionTypes eReligion) const
 }
 
 
-void CvPlayer::convert(ReligionTypes eReligion)
+void CvPlayer::convert(ReligionTypes eReligion, /* f1rpo: */ bool bForce)
 {
 	int iAnarchyLength;
 
-	if (!canConvert(eReligion))
+	if (!canConvert(eReligion) /* f1rpo: */ && !bForce)
 	{
 		return;
 	}
@@ -9459,6 +9462,36 @@ void CvPlayer::changeWorkerSpeedModifier(int iChange)
 	m_iWorkerSpeedModifier = (m_iWorkerSpeedModifier + iChange);
 }
 
+// BUG - Pre-Chop - start  (merged by f1rpo)
+// Returns the work rate for the first unit that can build <eBuild>.
+int CvPlayer::getWorkRate(BuildTypes eBuild) const
+{
+	int iRate = 0;
+	CvCivilizationInfo& kCiv = GC.getCivilizationInfo(getCivilizationType());
+
+	for (int iI = 0; iI < GC.getNumUnitClassInfos(); iI++)
+	{
+		CvUnitInfo& kUnit = GC.getUnitInfo((UnitTypes)kCiv.getCivilizationUnits(iI));
+
+		if (kUnit.getBuilds(eBuild))
+		{
+			iRate = kUnit.getWorkRate();
+			break;
+		}
+	}
+
+	iRate *= std::max(0, getWorkerSpeedModifier() + 100);
+	iRate /= 100;
+
+	if (!isHuman() && !isBarbarian())
+	{
+		iRate *= std::max(0, (GC.getHandicapInfo(GC.getGameINLINE().getHandicapType()).getAIWorkRateModifier() + 100));
+		iRate /= 100;
+	}
+
+	return iRate;
+}
+// BUG - Pre-Chop - end
 
 int CvPlayer::getImprovementUpgradeRateModifier() const
 {
@@ -10806,6 +10839,9 @@ void CvPlayer::setCombatExperience(int iExperience)
 					}
 				}
 			}
+			// <f1rpo>
+			if(getID() == GC.getGameINLINE().getActivePlayer() && getBugOptionBOOL("MainInterface__Combat_Counter", false))
+				gDLL->getInterfaceIFace()->setDirty(GameData_DIRTY_BIT, true); // </f1rpo>
 		}
 	}
 }
@@ -15464,7 +15500,8 @@ bool CvPlayer::doEspionageMission(EspionageMissionTypes eMission, PlayerTypes eT
 				}
 			}
 
-			szBuffer = gDLL->getText("TXT_KEY_ESPIONAGE_TARGET_STEAL_TREASURY").GetCString();
+			szBuffer = gDLL->getText("TXT_KEY_ESPIONAGE_TARGET_STEAL_TREASURY",
+					iNumTotalGold); // f1rpo (advc.004i)
 			changeGold(iNumTotalGold);
 			if (NO_PLAYER != eTargetPlayer)
 			{
@@ -18916,7 +18953,8 @@ EventTriggeredData* CvPlayer::initTriggeredData(EventTriggerTypes eEventTrigger,
 				{
 					if (kTrigger.getBuildingRequired(i) != NO_BUILDINGCLASS)
 					{
-						iNumBuildings += getBuildingClassCount((BuildingClassTypes)kTrigger.getBuildingRequired(i));
+						iNumBuildings += kLoopPlayer. // f1rpo (bugfix): was this->
+								getBuildingClassCount((BuildingClassTypes)kTrigger.getBuildingRequired(i));
 					}
 				}
 			}
@@ -19474,6 +19512,10 @@ void CvPlayer::applyEvent(EventTypes eEvent, int iEventTriggeredId, bool bUpdate
 		if (kEvent.getEspionagePoints() != 0)
 		{
 			GET_TEAM(getTeam()).changeEspionagePointsAgainstTeam(GET_PLAYER(pTriggeredData->m_eOtherPlayer).getTeam(), kEvent.getEspionagePoints());
+			// <f1rpo> bugfix
+			if (kEvent.getEspionagePoints() > 0)
+				GET_TEAM(getTeam()).changeEspionagePointsEver(kEvent.getEspionagePoints());
+			// </f1rpo>
 		}
 	}
 

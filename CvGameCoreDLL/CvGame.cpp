@@ -2498,7 +2498,8 @@ void CvGame::selectUnit(CvUnit* pUnit, bool bClear, bool bToggle, bool bSound) c
 	} */
 	// K-Mod. Redesigned to make selection more sensible and predictable
 	// In 'simple mode', shift always groups and always targets a only a single unit.
-	bool bSimpleMode = getBugOptionBOOL("MainInterface__SimpleSelectionMode", false, "SIMPLE_SELECTION_MODE");
+	// f1rpo (bugfix): was MainInterface__SimpleSelectionMode
+	bool bSimpleMode = getBugOptionBOOL("MainInterface__SimpleSelection", false, "SIMPLE_SELECTION_MODE");
 
 	bool bExplicitDeselect = false;
 
@@ -6949,10 +6950,11 @@ void CvGame::createBarbarianCities()
 				
 					if (iTargetCitiesMultiplier > 100)
 					{
-						iValue *= pLoopPlot->area()->getNumOwnedTiles();
+						iValue *= /* f1rpo (bugfix): */ std::max(1,
+								pLoopPlot->area()->getNumOwnedTiles());
 					}
-
-					iValue += (100 + getSorenRandNum(50, "Barb City Found"));
+					// f1rpo (bugfix): was +=
+					iValue *= (100 + getSorenRandNum(50, "Barb City Found"));
 					iValue /= 100;
 
 					if (iValue > iBestValue)

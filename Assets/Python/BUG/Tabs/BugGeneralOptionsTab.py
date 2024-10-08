@@ -29,7 +29,8 @@ class BugGeneralOptionsTab(BugOptionsTab.BugOptionsTab):
 
 		#self.createAutoSavePanel(screen, center)
 		self.addSpacer(screen, center, "General3")
-		#self.createActionsPanel(screen, center)
+		# f1rpo: Uncommented -- for Pre-Chop options
+		self.createActionsPanel(screen, center)
 
 		self.createInfoPanePanel(screen, center)
 		self.addSpacer(screen, right, "General4")
@@ -60,11 +61,15 @@ class BugGeneralOptionsTab(BugOptionsTab.BugOptionsTab):
 		
 	def createActionsPanel(self, screen, panel):
 		self.addLabel(screen, panel, "Actions", "Actions:")
-		self.addCheckbox(screen, panel, "Actions__AskDeclareWarUnits")
-		self.addCheckbox(screen, panel, "Actions__SentryHealing")
-		self.addCheckbox(screen, panel, "Actions__SentryHealingOnlyNeutral", True)
-		self.addCheckbox(screen, panel, "Actions__PreChopForests")
-		self.addCheckbox(screen, panel, "Actions__PreChopImprovements")
+		# <f1rpo>
+		# These still aren't implemented
+		#self.addCheckbox(screen, panel, "Actions__AskDeclareWarUnits")
+		#self.addCheckbox(screen, panel, "Actions__SentryHealing")
+		#self.addCheckbox(screen, panel, "Actions__SentryHealingOnlyNeutral", True)
+		# These are now in a separate "WorkerActions" module
+		self.addCheckbox(screen, panel, "WorkerActions__PreChopForests")
+		self.addCheckbox(screen, panel, "WorkerActions__PreChopImprovements")
+		# </f1rpo>
 		
 	def createTechSplashPanel(self, screen, panel):
 		self.addLabel(screen, panel, "TechWindow", "Tech Splash Screen:")

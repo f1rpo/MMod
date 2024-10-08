@@ -1797,9 +1797,11 @@ def greatMediator2Callback(argsList):
 	if iButton == 0:
 		destPlayer = gc.getPlayer(iData1)
 		player = gc.getPlayer(iData2)
-		gc.getTeam(destPlayer.getTeam()).makePeace(player.getTeam())
-		destPlayer.AI_changeAttitudeExtra(iData2, 1)
-		player.AI_changeAttitudeExtra(iData1, 1)		
+		# DarkLunaPhantom - Added a check to prevent weird bugs like making peace with a vassal if the situation changes after the event is triggered.
+		if gc.getTeam(player.getTeam()).canChangeWarPeace(destPlayer.getTeam()):
+			gc.getTeam(destPlayer.getTeam()).makePeace(player.getTeam())
+			destPlayer.AI_changeAttitudeExtra(iData2, 1)
+			player.AI_changeAttitudeExtra(iData1, 1)
 
 	return 0
 	
@@ -3199,8 +3201,16 @@ def canTriggerExperiencedCaptain(argsList):
 def getNumPartisanUnits(plot, iPlayer):
 	for i in range(gc.getNumCultureLevelInfos()):
 		iI = gc.getNumCultureLevelInfos() - i - 1
-		if plot.getCulture(iPlayer) >= gc.getGame().getCultureThreshold(iI):
-			return iI
+		# <f1rpo> (idea by SmokeyTheBear) Use city culture if there is a city (and there should be one).
+		# Note that CyCity.getCultureLevel can't be used b/c iPlayer no longer owns the city.
+		if plot.isCity():
+			iCulture = plot.getPlotCity().getCulture(iPlayer)
+		else:
+			iCulture = plot.getCulture(iPlayer)
+		if iCulture >= gc.getGame().getCultureThreshold(iI):
+			# Subtracting 1 here means that cities with Poor culture don't spawn partisans
+			return iI - 1
+		# </f1rpo>
 	return 0
 
 def getHelpPartisans1(argsList):

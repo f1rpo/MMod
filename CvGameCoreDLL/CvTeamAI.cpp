@@ -1247,9 +1247,12 @@ int CvTeamAI::AI_chooseElection(const VoteSelectionData& kVoteSelectionData) con
 				{
 					if (GET_PLAYER((PlayerTypes)iJ).getTeam() == getID())
 					{
-						PlayerVoteTypes eVote = GET_PLAYER((PlayerTypes)iJ).AI_diploVote(kVoteSelectionData.aVoteOptions[iI], eVoteSource, true);
+						// f1rpo (bugfix from Kek-Mod): Had shadowed the eVote variable
+						PlayerVoteTypes ePlayerVote = GET_PLAYER((PlayerTypes)iJ).AI_diploVote(kVoteSelectionData.aVoteOptions[iI], eVoteSource, true);
 
-						if (eVote != PLAYER_VOTE_YES || eVote == GC.getGameINLINE().getVoteOutcome((VoteTypes)iI))
+						//if (eVote != PLAYER_VOTE_YES || eVote == GC.getGameINLINE().getVoteOutcome((VoteTypes)iI))
+						// f1rpo (bugfix from Kek-Mod cont.):
+						if (ePlayerVote != PLAYER_VOTE_YES || ePlayerVote == GC.getGameINLINE().getVoteOutcome(eVote))
 						{
 							bValid = false;
 							break;
@@ -1898,10 +1901,12 @@ int CvTeamAI::AI_endWarVal(TeamTypes eTeam) const
 
 	int iOurPower = std::max(1, getPower(true));
 	int iTheirPower = std::max(1, kWarTeam.getDefensivePower(getID()));
-
-	iValue *= iTheirPower + 10;
-	iValue /= std::max(1, iOurPower + iTheirPower + 10);
-
+	{	// f1rpo (based on Kek-Mod): The multiplication can overflow
+		long long lValue = iValue;
+		lValue *= iTheirPower + 10;
+		lValue /= iOurPower + iTheirPower + 10;
+		iValue = static_cast<int>(lValue); // f1rpo
+	}
 	WarPlanTypes eWarPlan = AI_getWarPlan(eTeam);
 
 	// if we are not human, do we want to continue war for strategic reasons?
@@ -2129,7 +2134,13 @@ int CvTeamAI::AI_techTradeVal(TechTypes eTech, TeamTypes eTeam) const
 	iValue += (((iCost / 2) * (iPossibleKnownCount - iKnownCount)) / iPossibleKnownCount);
 	*/
 	// K-Mod. Standardized the modifier for # of teams with the tech; and removed the effect of team size.
-	int iValue = (150 + AI_knownTechValModifier(eTech)) * std::max(0, (getResearchCost(eTech, true, false) - getResearchProgress(eTech))) / 100;
+	int iValue = (150 + AI_knownTechValModifier(eTech)) *
+			/*	f1rpo: Don't remove the effect of team size. A correct implementation
+				would also have to remove it from the research progress; but it would
+				still be a questionable change imo, making tech-for-gold purchases
+				cheaper in team games for no particular reason. (Perhaps it was aimed
+				at Permanent Alliances only?) */
+			std::max(0, (getResearchCost(eTech/*, true, false*/) - getResearchProgress(eTech))) / 100;
 	// K-Mod end
 
 	iValue *= std::max(0, (GC.getTechInfo(eTech).getAITradeModifier() + 100));
@@ -3699,8 +3710,12 @@ DenialTypes CvTeamAI::AI_makePeaceTrade(TeamTypes ePeaceTeam, TeamTypes eTeam) c
 	// K-Mod
 	if (AI_refusePeace(ePeaceTeam))
 		return DENIAL_VICTORY;
-
-	if (!GET_PLAYER(getLeaderID()).canContactAndTalk(GET_TEAM(ePeaceTeam).getLeaderID()) || GET_TEAM(ePeaceTeam).AI_refusePeace(getID()))
+	if (!GET_PLAYER(getLeaderID()).canContactAndTalk(GET_TEAM(ePeaceTeam).getLeaderID()))
+	{
+		// f1rpo: CONTACT_THEM isn't helpful if they're not willing to talk
+		return DENIAL_RECENT_CANCEL;
+	}
+	if (GET_TEAM(ePeaceTeam).AI_refusePeace(getID()))
 		return DENIAL_CONTACT_THEM;
 	// K-Mod end
 

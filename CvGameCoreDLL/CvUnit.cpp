@@ -2437,7 +2437,8 @@ bool CvUnit::willRevealByMove(const CvPlot* pPlot) const
 }
 
 // K-Mod. I've rearranged a few things to make the function slightly faster, and added "bAssumeVisible" which signals that we should check for units on the plot regardless of whether we can actually see.
-bool CvUnit::canMoveInto(const CvPlot* pPlot, bool bAttack, bool bDeclareWar, bool bIgnoreLoad, bool bAssumeVisible) const
+bool CvUnit::canMoveInto(const CvPlot* pPlot, bool bAttack, bool bDeclareWar, bool bIgnoreLoad, bool bAssumeVisible,
+	bool bCheckMadeAttack) const // f1rpo (advc.001k)
 {
 	PROFILE_FUNC();
 
@@ -2639,7 +2640,7 @@ bool CvUnit::canMoveInto(const CvPlot* pPlot, bool bAttack, bool bDeclareWar, bo
 
 	// The following change makes it possible to capture defenseless units after having 
 	// made a previous attack or paradrop
-	if (bAttack)
+	if (bAttack /* f1rpo (advc.001k): */ && bCheckMadeAttack)
 	{
 		if (isMadeAttack() && !isBlitz() && pPlot->isVisibleEnemyDefender(this))
 		{
@@ -2802,9 +2803,11 @@ bool CvUnit::canMoveInto(const CvPlot* pPlot, bool bAttack, bool bDeclareWar, bo
 }
 
 
-bool CvUnit::canMoveOrAttackInto(const CvPlot* pPlot, bool bDeclareWar) const
+bool CvUnit::canMoveOrAttackInto(const CvPlot* pPlot, bool bDeclareWar,
+	bool bCheckMadeAttack) const // f1rpo (advc.001k)
 {
-	return (canMoveInto(pPlot, false, bDeclareWar) || canMoveInto(pPlot, true, bDeclareWar));
+	return (canMoveInto(pPlot, false, bDeclareWar) || canMoveInto(pPlot, true, bDeclareWar,
+			false, true, bCheckMadeAttack)); // f1rpo (advc.001k)
 }
 
 
@@ -7054,6 +7057,8 @@ void CvUnit::promote(PromotionTypes ePromotion, int iLeaderUnitId)
 		return;
 	}
 
+	bool bPlaySound = true; // f1rpo
+
 	if (iLeaderUnitId >= 0)
 	{
 		CvUnit* pWarlord = GET_PLAYER(getOwnerINLINE()).getUnit(iLeaderUnitId);
@@ -7070,6 +7075,26 @@ void CvUnit::promote(PromotionTypes ePromotion, int iLeaderUnitId)
 			reloadEntity();
 		}
 	}
+	// <f1rpo>
+	else if (IsSelected())
+	{
+		int iSelectedCanPromote = 0;
+		for (CLLNode<IDInfo>* pNode = gDLL->getInterfaceIFace()->headSelectionListNode();
+			pNode != NULL; pNode = gDLL->getInterfaceIFace()->nextSelectionListNode(pNode))
+		{
+			CvUnit const* pUnit = ::getUnit(pNode->m_data);
+			if (pUnit != NULL && pUnit->canPromote(ePromotion, iLeaderUnitId))
+			{
+				iSelectedCanPromote++;
+				// Play sound only for the last promoted unit in a selected stack
+				if (iSelectedCanPromote > 1)
+				{
+					bPlaySound = false;
+					break;
+				}
+			}
+		}
+	} // </f1rpo>
 
 	if (!GC.getPromotionInfo(ePromotion).isLeader())
 	{
@@ -7085,7 +7110,8 @@ void CvUnit::promote(PromotionTypes ePromotion, int iLeaderUnitId)
 
 	if (IsSelected())
 	{
-		gDLL->getInterfaceIFace()->playGeneralSound(GC.getPromotionInfo(ePromotion).getSound());
+		if (bPlaySound) // f1rpo
+			gDLL->getInterfaceIFace()->playGeneralSound(GC.getPromotionInfo(ePromotion).getSound());
 
 		gDLL->getInterfaceIFace()->setDirty(UnitInfo_DIRTY_BIT, true);
 		gDLL->getFAStarIFace()->ForceReset(&GC.getInterfacePathFinder()); // K-Mod.
@@ -7930,7 +7956,10 @@ bool CvUnit::isRivalTerritory() const
 
 bool CvUnit::isMilitaryHappiness() const
 {
-	return m_pUnitInfo->isMilitaryHappiness();
+	return (m_pUnitInfo->isMilitaryHappiness()
+			/*	f1rpo: Rival units shouldn't count. Easiest to fix this here
+				(although it's not the most intuitive place). */
+			&& plot()->isCity() && plot()->getTeam() == getTeam());
 }
 
 
@@ -12464,14 +12493,18 @@ void CvUnit::flankingStrikeCombat(const CvPlot* pPlot, int iAttackerStrength, in
 	}
 
 	if (iNumUnitsHit > 0)
-	{
+	{	// f1rpo: bForce these messages and don't play a sound
 		CvWString szBuffer = gDLL->getText("TXT_KEY_MISC_YOU_DAMAGED_UNITS_BY_FLANKING", getNameKey(), iNumUnitsHit);
-		gDLL->getInterfaceIFace()->addHumanMessage(getOwnerINLINE(), false, GC.getEVENT_MESSAGE_TIME(), szBuffer, GC.getEraInfo(GC.getGameINLINE().getCurrentEra()).getAudioUnitVictoryScript(), MESSAGE_TYPE_INFO, NULL, (ColorTypes)GC.getInfoTypeForString("COLOR_GREEN"), pPlot->getX_INLINE(), pPlot->getY_INLINE());
+		gDLL->getInterfaceIFace()->addHumanMessage(getOwnerINLINE(), true, GC.getEVENT_MESSAGE_TIME(), szBuffer,
+				/*GC.getEraInfo(GC.getGameINLINE().getCurrentEra()).getAudioUnitVictoryScript()*/ NULL,
+				MESSAGE_TYPE_INFO, NULL, (ColorTypes)GC.getInfoTypeForString("COLOR_GREEN"), pPlot->getX_INLINE(), pPlot->getY_INLINE());
 
 		if (NULL != pSkipUnit)
 		{
 			szBuffer = gDLL->getText("TXT_KEY_MISC_YOUR_UNITS_DAMAGED_BY_FLANKING", getNameKey(), iNumUnitsHit);
-			gDLL->getInterfaceIFace()->addHumanMessage(pSkipUnit->getOwnerINLINE(), false, GC.getEVENT_MESSAGE_TIME(), szBuffer, GC.getEraInfo(GC.getGameINLINE().getCurrentEra()).getAudioUnitDefeatScript(), MESSAGE_TYPE_INFO, NULL, (ColorTypes)GC.getInfoTypeForString("COLOR_RED"), pPlot->getX_INLINE(), pPlot->getY_INLINE());
+			gDLL->getInterfaceIFace()->addHumanMessage(pSkipUnit->getOwnerINLINE(), true, GC.getEVENT_MESSAGE_TIME(), szBuffer,
+					/*GC.getEraInfo(GC.getGameINLINE().getCurrentEra()).getAudioUnitDefeatScript()*/ NULL,
+					MESSAGE_TYPE_INFO, NULL, (ColorTypes)GC.getInfoTypeForString("COLOR_RED"), pPlot->getX_INLINE(), pPlot->getY_INLINE());
 		}
 	}
 }

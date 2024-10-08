@@ -2539,11 +2539,15 @@ void CvPlayerAI::AI_updateCommerceWeights()
 		pCity->AI_setCultureWeight(iWeight);
 	} // end culture
 
-	//
-	// Espionage weight
-	//
-	{
-		int iWeightThreshold = 0; // For human players, what amount of espionage weight indicates that we care about a civ?
+	AI_setEspionageWeight(AI_calculateEspionageWeight()); // f1rpo: Moved into new function
+	// K-Mod end
+}
+
+// f1rpo: K-Mod code moved from AI_updateCommerceWeights
+int CvPlayerAI::AI_calculateEspionageWeight() const
+{
+	int iWeightThreshold = 0; // For human players, what amount of espionage weight indicates that we care about a civ?
+
 		if (isHuman())
 		{
 			int iTotalWeight = 0;
@@ -2647,10 +2651,9 @@ void CvPlayerAI::AI_updateCommerceWeights()
 				iWeight /= 110;
 			}
 		}
-		AI_setEspionageWeight(iWeight);
-	} // end espionage
+
+	return iWeight;
 }
-// K-Mod
 
 // K-Mod: I've moved the bulk of this function into AI_foundValue_bulk...
 short CvPlayerAI::AI_foundValue(int iX, int iY, int iMinRivalRange, bool bStartingLoc) const
@@ -3088,7 +3091,9 @@ short CvPlayerAI::AI_foundValue_bulk(int iX, int iY, const CvFoundSettings& kSet
 					if (GC.getBuildInfo((BuildTypes)i).isFeatureRemove(eFeature))
 					{
 						bEventuallyRemoveableFeature = true;
-						if (GET_TEAM(getTeam()).isHasTech((TechTypes)GC.getBuildInfo((BuildTypes)i).getTechPrereq()))
+						if (GET_TEAM(getTeam()).isHasTech((TechTypes)GC.getBuildInfo((BuildTypes)i).getTechPrereq())
+							// f1rpo (bugfix):
+							&& GET_TEAM(getTeam()).isHasTech((TechTypes)GC.getBuildInfo((BuildTypes)i).getFeatureTech(eFeature)))
 						{
 							bRemoveableFeature = true;
 							break;
@@ -3297,18 +3302,26 @@ short CvPlayerAI::AI_foundValue_bulk(int iX, int iY, const CvFoundSettings& kSet
 					((pLoopPlot->isWater() && bIsCoastal) || pLoopPlot->area() == pPlot->area() || pLoopPlot->area()->getCitiesPerPlayer(getID()) > 0))
 				{
 					//iBonusValue = AI_bonusVal(eBonus, 1, true) * ((!kSet.bStartingLoc && (getNumTradeableBonuses(eBonus) == 0) && (paiBonusCount[eBonus] == 1)) ? 80 : 20);
-					// K-Mod
-					int iCount = getNumTradeableBonuses(eBonus) == 0 + viBonusCount[eBonus];
-					int iBonusValue = AI_bonusVal(eBonus, 0, true) * 80 / (1 + 2*iCount);
+					// K-Mod.
+					/*int iCount = getNumTradeableBonuses(eBonus) == 0 + viBonusCount[eBonus];
+					int iBonusValue = AI_bonusVal(eBonus, 0, true) * 80 / (1 + 2*iCount);*/
+					/*	f1rpo: The "==0" above was probably accidentally copied from the original code.
+						But I think we can do better by letting AI_bonusVal handle any bonuses that
+						the player might already have access to (iChange=1). */
+					int iBonusValue = AI_bonusVal(eBonus, 1) * 70 / (1 + viBonusCount[eBonus]);
+
 					// Note: 1. the value of starting bonuses is reduced later.
 					//       2. iTempValue use to be used throughout this section. I've replaced all references with iBonusValue, for clarity.
 					viBonusCount[eBonus]++; // (this use to be above the iBonusValue initialization)
 					FAssert(viBonusCount[eBonus] > 0);
-					//
+					// K-Mod end
 
 					iBonusValue *= (kSet.bStartingLoc ? 100 : kSet.iGreed);
 					iBonusValue /= 100;
-
+					// <f1rpo> (advc.031)
+					if (pLoopPlot->getOwnerINLINE() == getID())
+						iBonusValue = 0; // We've already got it
+					// </f1rpo>
 					if (!kSet.bStartingLoc)
 					{
 						// K-Mod. (original code deleted)
@@ -3750,7 +3763,8 @@ short CvPlayerAI::AI_foundValue_bulk(int iX, int iY, const CvFoundSettings& kSet
 				int iProximity = 0;
 
 				int iLoop;
-				for (CvCity* pLoopCity = firstCity(&iLoop); pLoopCity != NULL; pLoopCity = nextCity(&iLoop))
+				// f1rpo (bugfix): Go through kLoopPlayer's cities, not this player's.
+				for (CvCity* pLoopCity = kLoopPlayer.firstCity(&iLoop); pLoopCity != NULL; pLoopCity = kLoopPlayer.nextCity(&iLoop))
 				{
 					if (i == getID())
 					{
@@ -4391,7 +4405,8 @@ bool CvPlayerAI::AI_getAnyPlotDanger(CvPlot* pPlot, int iRange, bool bTestMoves,
 							{
 								if (!(pLoopUnit->isInvisible(eTeam, false)))
 								{
-								    if (pLoopUnit->canMoveOrAttackInto(pPlot))
+								    if (pLoopUnit->canMoveOrAttackInto(pPlot,
+										false, false)) // f1rpo (advc.001k)
 								    {
                                         if (!bTestMoves)
                                         {
@@ -4525,7 +4540,8 @@ int CvPlayerAI::AI_getPlotDanger(CvPlot* pPlot, int iRange, bool bTestMoves) con
 							{
 								if (!(pLoopUnit->isInvisible(eTeam, false)))
 								{
-								    if (pLoopUnit->canMoveOrAttackInto(pPlot))
+								    if (pLoopUnit->canMoveOrAttackInto(pPlot,
+										false, false)) // f1rpo (advc.001k)
 								    {
                                         if (!bTestMoves)
                                         {
@@ -5307,7 +5323,10 @@ TechTypes CvPlayerAI::AI_bestTech(int iMaxPathLength, bool bFreeTech, bool bAsyn
 	for (int end_depth = 0; end_depth < iMaxPathLength; ++end_depth)
 	{
 		// Note: at depth == 0, there are no prereqs, so we only need to consider the best option.
-		for (int i = (end_depth == 0? iMaxPathLength-1 : techs_to_depth[end_depth]); i < techs_to_depth[end_depth+1]; ++i)
+		// f1rpo: But not like this ...
+		for (int i = (/*end_depth == 0? iMaxPathLength-1 :*/techs_to_depth[end_depth]);
+			// ... like that, i.e. we can _stop_ at iMaxPathLength-1.
+			i < (end_depth == 0 ? iMaxPathLength : techs_to_depth[end_depth+1]); ++i)
 		{
 			if (techs[i].first < iThreshold)
 				break; // Note: the techs are sorted, so if we're below the threshold, we're done.
@@ -5360,7 +5379,8 @@ TechTypes CvPlayerAI::AI_bestTech(int iMaxPathLength, bool bFreeTech, bool bAsyn
 
 				// OrTechs:
 				int iBestOrIndex = -1;
-				int iBestOrValue = -1;
+				// f1rpo: Was -1. Tech values can be negative.
+				int iBestOrValue = MIN_INT;
 				for (int p = 0; p < GC.getNUM_OR_TECH_PREREQS(); ++p)
 				{
 					TechTypes ePrereq = (TechTypes)GC.getTechInfo(techs_to_check.front()).getPrereqOrTechs(p);
@@ -6246,7 +6266,7 @@ int CvPlayerAI::AI_techValue(TechTypes eTech, int iPathLength, bool bFreeTech, b
 
 
 	/* ------------------ Building Value  ------------------ */
-	bool bEnablesWonder;
+	bool bEnablesWonder /* f1rpo: */ = false;
 	iValue += AI_techBuildingValue(eTech, bAsync, bEnablesWonder); // changed by K-Mod
 	iValue -= AI_obsoleteBuildingPenalty(eTech, bAsync); // K-Mod!
 
@@ -6826,6 +6846,7 @@ int CvPlayerAI::AI_techBuildingValue(TechTypes eTech, bool bConstCache, bool& bE
 {
 	PROFILE_FUNC();
 	FAssertMsg(!isAnarchy(), "AI_techBuildingValue should not be used while in anarchy. Results will be inaccurate.");
+	bEnablesWonder = false; // f1rpo (bugfix): Don't rely on caller to initialize this
 
 	int iTotalValue = 0;
 	std::vector<const CvCity*> relevant_cities; // (this will be populated when we find a building that needs to be evaluated)
@@ -7312,7 +7333,10 @@ int CvPlayerAI::AI_techUnitValue(TechTypes eTech, int iPathLength, bool& bEnable
 				}
 				else if( eExistingUnit != NO_UNIT )
 				{
-					iAssaultValue += 500 * std::max(0, AI_unitImpassableCount(eLoopUnit) - AI_unitImpassableCount(eExistingUnit)); // was 1000*
+					//iAssaultValue += 500 * std::max(0, AI_unitImpassableCount(eLoopUnit) - AI_unitImpassableCount(eExistingUnit)); // (was 1000* in BBAI, 100* in BtS)
+					/*	f1rpo (bugfix): We want the new unit to have _fewer_ impassables!
+						Given that 0 was counted previously, perhaps 500 is a bit much. */
+					iAssaultValue += 300 * std::max(0, AI_unitImpassableCount(eExistingUnit) - AI_unitImpassableCount(eLoopUnit));
 
 					int iNewCapacity = kLoopUnit.getMoves() * kLoopUnit.getCargoSpace();
 					int iOldCapacity = GC.getUnitInfo(eExistingUnit).getMoves() * GC.getUnitInfo(eExistingUnit).getCargoSpace();
@@ -9860,8 +9884,14 @@ bool CvPlayerAI::AI_counterPropose(PlayerTypes ePlayer, const CLinkList<TradeDat
 				std::vector<std::pair<TradeData*, int> >::iterator it, best_it;
 				for (best_it = it = item_value_list.begin(); it != item_value_list.end(); ++it)
 				{
-					if ((it->second > value_gap && best_it->second < value_gap) ||
-						(std::abs(it->second - value_gap) < std::abs(best_it->second - value_gap)))
+					/*if ((it->second > value_gap && best_it->second < value_gap) ||
+						(std::abs(it->second - value_gap) < std::abs(best_it->second - value_gap)))*/
+					/*	<f1rpo> Bugfix, arguably. The last condition above allows an item
+						that doesn't fill the value gap to replace an item that does. */
+					if (it->second > value_gap
+						&& (best_it->second < value_gap
+						|| std::abs(it->second - value_gap) < std::abs(best_it->second - value_gap)))
+						// </f1rpo>
 					{
 						best_it = it;
 					}
@@ -10531,7 +10561,7 @@ int CvPlayerAI::AI_baseBonusVal(BonusTypes eBonus) const
 					if (iUnitValue > 0)
 					{
 						// devalue the unit if we wouldn't be able to build it anyway
-						if (canTrain(eLoopUnit))
+						if (canTrain(eLoopUnit, /* f1rpo (bugfix): */ true))
 						{
 							// is it a water unit and no coastal cities or our coastal city cannot build because its obsolete
 							if ((kLoopUnit.getDomainType() == DOMAIN_SEA && (pCoastalCity == NULL || pCoastalCity->allUpgradesAvailable(eLoopUnit) != NO_UNIT)) ||
@@ -10634,7 +10664,9 @@ int CvPlayerAI::AI_baseBonusVal(BonusTypes eBonus) const
 						bool bIsStateReligion = (((ReligionTypes) kLoopBuilding.getStateReligion()) != NO_RELIGION);
 
 						//check if function call is cached
-						bool bCanConstruct = canConstruct(eLoopBuilding, false, /*bTestVisible*/ true, /*bIgnoreCost*/ true);
+						bool bCanConstruct = canConstruct(eLoopBuilding,
+								true, // f1rpo: bugfix (though it doesn't really make a difference)
+								/*bTestVisible=*/true, /*bIgnoreCost=*/true);
 						
 						// bCanNeverBuild when true is accurate, it may be false in some cases where we will never be able to build 
 						bool bCanNeverBuild = (bHasTechForBuilding && !bCanConstruct && !bIsStateReligion);
@@ -10694,7 +10726,7 @@ int CvPlayerAI::AI_baseBonusVal(BonusTypes eBonus) const
 						// project worthless
 						iTempValue = 0;
 					}
-					else if (canCreate(eProject))
+					else if (canCreate(eProject /*f1rpo (bugfix): */, true))
 					{
 						iTempValue *= 2;
 					}
@@ -10982,8 +11014,12 @@ int CvPlayerAI::AI_cityTradeVal(CvCity* pCity) const
 	iValue += pCity->getPopulation()*20 + pCity->getHighestPopulation()*30; // K-Mod
 
 	iValue += (pCity->getCultureLevel() * 200);
-	iValue += 200 * pCity->getCultureLevel() * pCity->getCulture(getID()) / std::max(1, pCity->getCulture(pCity->getOwnerINLINE())); // K-Mod
-
+	{
+		int iTotalCityCulture = pCity->getCulture(pCity->getOwnerINLINE())
+				// f1rpo (bugfix): So that at most 200*CultureLevel gets added below
+				+ pCity->getCulture(getID());
+		iValue += 200 * pCity->getCultureLevel() * pCity->getCulture(getID()) / std::max(1, iTotalCityCulture); // K-Mod
+	}
 	//iValue += (((((pCity->getPopulation() * 50) + GC.getGameINLINE().getElapsedGameTurns() + 100) * 4) * pCity->plot()->calculateCulturePercent(pCity->getOwnerINLINE())) / 100);
 	// K-Mod
 	int iCityTurns = GC.getGameINLINE().getGameTurn() - (pCity->getGameTurnFounded() + pCity->getGameTurnAcquired())/2;
@@ -11175,9 +11211,12 @@ int CvPlayerAI::AI_stopTradingTradeVal(TeamTypes eTradeTeam, PlayerTypes ePlayer
 
 	for(pLoopDeal = GC.getGameINLINE().firstDeal(&iLoop); pLoopDeal != NULL; pLoopDeal = GC.getGameINLINE().nextDeal(&iLoop))
 	{
-		if (pLoopDeal->isCancelable(getID()) && !(pLoopDeal->isPeaceDeal()))
+		// f1rpo (bugfix): ePlayer is the one who stops trading
+		if (pLoopDeal->isCancelable(/*getID()*/ ePlayer) && !(pLoopDeal->isPeaceDeal()))
 		{
-			if (GET_PLAYER(pLoopDeal->getFirstPlayer()).getTeam() == GET_PLAYER(ePlayer).getTeam())
+			if (GET_PLAYER(pLoopDeal->getFirstPlayer()).getTeam() == GET_PLAYER(ePlayer).getTeam()
+				// f1rpo (bugfix): Don't count all deals of ePlayer - just those with eTradeTeam
+				&& GET_PLAYER(pLoopDeal->getSecondPlayer()).getTeam() == eTradeTeam)
 			{
 				if (pLoopDeal->getLengthSecondTrades() > 0)
 				{
@@ -11185,7 +11224,9 @@ int CvPlayerAI::AI_stopTradingTradeVal(TeamTypes eTradeTeam, PlayerTypes ePlayer
 				}
 			}
 
-			if (GET_PLAYER(pLoopDeal->getSecondPlayer()).getTeam() == GET_PLAYER(ePlayer).getTeam())
+			if (GET_PLAYER(pLoopDeal->getSecondPlayer()).getTeam() == GET_PLAYER(ePlayer).getTeam()
+				// f1rpo (bugfix):
+				&& GET_PLAYER(pLoopDeal->getFirstPlayer()).getTeam() == eTradeTeam)
 			{
 				if (pLoopDeal->getLengthFirstTrades() > 0)
 				{
@@ -11285,12 +11326,15 @@ int CvPlayerAI::AI_civicTradeVal(CivicTypes eCivic, PlayerTypes ePlayer) const
 
 	eBestCivic = GET_PLAYER(ePlayer).AI_bestCivic((CivicOptionTypes)(GC.getCivicInfo(eCivic).getCivicOptionType()));
 
-	if (eBestCivic != NO_CIVIC)
+	if (eBestCivic != NO_CIVIC && eBestCivic != eCivic)
 	{
-		if (eBestCivic != eCivic)
-		{
-			iValue += std::max(0, ((GET_PLAYER(ePlayer).AI_civicValue(eBestCivic) - GET_PLAYER(ePlayer).AI_civicValue(eCivic)) * 2));
-		}
+		iValue += std::max(0, 2 *
+				/*	f1rpo: AI_civicValue is at a scale of 1 commerce per turn.
+					ePlayer will have to run the new civic for longer than 2 turns ...
+					2*MIN_REVOLUTION_TURNS is consistent with code at the end of AI_doCivics. */
+				GC.getDefineINT("MIN_REVOLUTION_TURNS") *
+				(GET_PLAYER(ePlayer).AI_civicValue(eBestCivic)
+				- GET_PLAYER(ePlayer).AI_civicValue(eCivic)));
 	}
 
 	if (GET_TEAM(GET_PLAYER(ePlayer).getTeam()).isVassal(getTeam()))
@@ -15367,7 +15411,9 @@ int CvPlayerAI::AI_espionageVal(PlayerTypes eTargetPlayer, EspionageMissionTypes
 		// K-Mod (I didn't comment that line out, btw.)
 		const TeamTypes eTeam = GET_PLAYER(eTargetPlayer).getTeam();
 		const int iEra = getCurrentEra();
-		int iCounterValue = 5 + 3*iEra + (AI_isDoVictoryStrategy(AI_VICTORY_CULTURE3 || AI_VICTORY_SPACE3) ? 20 : 0);
+		int iCounterValue = 5 + 3*iEra
+				// f1rpo (bugfix): was a logical ||
+				+ (AI_isDoVictoryStrategy(AI_VICTORY_CULTURE3 | AI_VICTORY_SPACE3) ? 20 : 0);
 		// this is pretty bogus. I'll try to come up with something better some other time.
 		iCounterValue *= 50*iEra*(iEra+1)/2 + GET_TEAM(eTeam).getEspionagePointsAgainstTeam(getTeam());
 		iCounterValue /= std::max(1, 50*iEra*(iEra+1) + GET_TEAM(getTeam()).getEspionagePointsAgainstTeam(eTeam))/2;
@@ -16706,8 +16752,15 @@ void CvPlayerAI::AI_doCivics()
 		{
 			int iBestValue;
 			CivicTypes eNewCivic = AI_bestCivic((CivicOptionTypes)iI, &iBestValue);
-
+			//int iTestAnarchy = getCivicAnarchyLength(&aeBestCivic[0]);
+			// <f1rpo> Temporary switch - to compute anarchy length accurately.
+			CivicTypes eOtherCivic = aeBestCivic[iI];
+			if(eOtherCivic == eNewCivic) // Not necessary, but might as well.
+				continue;
+			aeBestCivic[iI] = eNewCivic;
 			int iTestAnarchy = getCivicAnarchyLength(&aeBestCivic[0]);
+			aeBestCivic[iI] = eOtherCivic;
+			// </f1rpo>
 			// using ~30 percent as a rough estimate of revolution cost, and low threshold regardless of anarchy just for a bit of inertia.
 			// reduced threshold if we are already going to have a revolution.
 			int iThreshold = (iTestAnarchy > iAnarchyLength ? (!bFirstPass | bWantSwitch ? 20 : 30) : 5);
@@ -18350,8 +18403,10 @@ void CvPlayerAI::AI_doDiplo()
 													if (canTradeItem(((PlayerTypes)iI), item, true))
 													{
 														iValue = (1 + GC.getGameINLINE().getSorenRandNum(100, "AI Tech Trading #2"));
-														
-														iValue *= GET_TEAM(eBestTeam).getResearchLeft((TechTypes)iJ);
+														//iValue *= GET_TEAM(eBestTeam).getResearchLeft((TechTypes)iJ);
+														/*	f1rpo (bugfix) iI is the hireling who will receive the tech.
+															eBestTeam is the target. */
+														iValue *= GET_TEAM((TeamTypes)iI).getResearchLeft((TechTypes)iJ);
 
 														if (iValue > iBestValue)
 														{
@@ -18386,9 +18441,11 @@ void CvPlayerAI::AI_doDiplo()
 															{
 																iValue = (1 + GC.getGameINLINE().getSorenRandNum(100, "AI Tech Trading #2"));
 																
-																iValue *= GET_TEAM(eBestTeam).getResearchLeft((TechTypes)iJ);
-
-																if (iValue > iBestValue)
+																/*iValue *= GET_TEAM(eBestTeam).getResearchLeft((TechTypes)iJ);
+																if (iValue > iBestValue)*/
+																// <f1rpo> (bugfixes)
+																iValue *= GET_TEAM((TeamTypes)iI).getResearchLeft((TechTypes)iJ);
+																if (iValue > iBestValue2) // </f1rpo>
 																{
 																	iBestValue2 = iValue;
 																	eBestGiveTech2 = ((TechTypes)iJ);
@@ -20782,9 +20839,13 @@ void CvPlayerAI::AI_updateStrategyHash()
 		if (iLastStrategyHash & AI_STRATEGY_BIG_ESPIONAGE || AI_getNumAIUnits(UNITAI_SPY) > 0)
 		{
 			int iTempValue = 0;
-			iTempValue += AI_commerceWeight(COMMERCE_ESPIONAGE) / 8;
+			//iTempValue += AI_commerceWeight(COMMERCE_ESPIONAGE) / 8;
 			// Note: although AI_commerceWeight is doubled for Big Espionage,
 			// the value here is unaffected because the strategy hash has been cleared.
+			/*	f1rpo (bugfix): ^Not true anymore; espionage commerce weight gets cached now.
+				Need to bypass the cache: */
+			iTempValue += AI_calculateEspionageWeight() / 8;
+
 			iTempValue += kTeam.getBestKnownTechScorePercent() < 85 ? 3 : 0;
 			iTempValue += kTeam.getAnyWarPlanCount(true) > kTeam.getAtWarCount(true) ? 2 : 0; // build up espionage before the start of a war
 			if (iWarSuccessRating < 0)
@@ -24657,7 +24718,8 @@ bool CvPlayerAI::AI_isPlotThreatened(CvPlot* pPlot, int iRange, bool bTestMoves)
 						CvUnit* pLoopUnit = ::getUnit(pUnitNode->m_data);
 						if (pLoopUnit->isEnemy(getTeam()) && pLoopUnit->canAttack() && !pLoopUnit->isInvisible(getTeam(), false))
 						{
-							if (pLoopUnit->canMoveOrAttackInto(pPlot))
+							if (pLoopUnit->canMoveOrAttackInto(pPlot,
+								false, false)) // f1rpo (advc.001k)
 							{
 								int iPathTurns = 0;
 								if (bTestMoves)

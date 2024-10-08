@@ -716,6 +716,9 @@ void CvInitCore::resetPlayer(PlayerTypes eID, CvInitCore * pSource, bool bClear,
 				setLeaderName(eID, pSource->getLeaderName(eID));
 				setSlotStatus(eID, pSource->getSlotStatus(eID));
 				setSlotClaim(eID, pSource->getSlotClaim(eID));
+				// <f1rpo> (advc.001p) Reset players while loading from within a game to avoid crash
+				if (pSource->getSavedGame() && GET_PLAYER(eID).isEverAlive())
+					GET_PLAYER(eID).reset(eID); // </f1rpo>
 			}
 		}
 	}
@@ -1987,7 +1990,32 @@ void CvInitCore::write(FDataStreamBase* pStream)
 	pStream->Write(uiSaveFlag);		// flag for expansion, see SaveBits)
 
 	// GAME DATA
-	pStream->Write(m_eType);
+	//pStream->Write(m_eType);
+	/*	<f1rpo> (advc.001p) Make sure that resetPlayer will be able to tell
+		that a game is being loaded when reloading this savegame.
+		After loading, the EXE calls setType(..._LOAD). When ..._LOAD is
+		already the game type, some code in setType won't be executed -
+		but I don't think that code needs to run at that point. */
+	GameType eWriteGameType = m_eType;
+	switch (eWriteGameType)
+	{
+	case GAME_SP_NEW:
+	case GAME_SP_SCENARIO:
+		eWriteGameType = GAME_SP_LOAD;
+		break;
+	case GAME_MP_NEW:
+	case GAME_MP_SCENARIO:
+		eWriteGameType = GAME_MP_LOAD;
+		break;
+	case GAME_HOTSEAT_NEW:
+	case GAME_HOTSEAT_SCENARIO:
+		eWriteGameType = GAME_HOTSEAT_LOAD;
+		break;
+	case GAME_PBEM_NEW:
+	case GAME_PBEM_SCENARIO:
+		eWriteGameType = GAME_PBEM_LOAD;
+	}
+	pStream->Write(eWriteGameType); // </f1rpo>
 	pStream->WriteString(m_szGameName);
 	pStream->WriteString(m_szGamePassword);
 	pStream->WriteString(m_szAdminPassword);

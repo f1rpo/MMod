@@ -624,4 +624,36 @@
 		<English>%s1.</English>
 		<!-- same for all languages -->
 	</TEXT>
+
+	<!-- f1rpo (advc.004e): For promotion buttons.
+		 Akin to TXT_KEY_PEDIA_LEADS_TO (CIV4GameTextInfos.xml).
+		 The "Leads to" translations are taken from there. -->
+	<TEXT>
+		<Tag>TXT_KEY_LEADS_TO</Tag>
+		<English>Leads to</English>
+		<French>M&#232;ne &#224;</French>
+		<German>F&#252;hrt zu</German>
+		<Italian>Conduce a</Italian>
+		<Spanish>Lleva a</Spanish>
+	</TEXT>
+	<TEXT>
+		<Tag>TXT_KEY_REQUIRED_FOR</Tag>
+		<English>Required for</English>
+		<French>N&#233;cessaire pour</French>
+		<German>Ben&#246;tigt f&#252;r</German>
+		<Italian>Necessario per</Italian>
+		<Spanish>Necesario por</Spanish>
+	</TEXT>
+
+	<!-- f1rpo (advc.004i): From CIV4GameText_BTS.xml.
+		 Added a variable for the amount of gold. -->
+	<TEXT>
+		<Tag>TXT_KEY_ESPIONAGE_TARGET_STEAL_TREASURY</Tag>
+		<English>%d1[ICON_GOLD] has been looted from our state treasury by enemy infiltrators!</English>
+		<French>%d1[ICON_GOLD] a &#233;t&#233; pill&#233;e de notre tr&#233;sor par des ennemis infiltr&#233;s !</French>
+		<German>%d1[ICON_GOLD] aus unserem Staatsschatz wurde von feindlichen Spionen erbeutet!</German>
+		<Italian>Infiltrati nemici hanno rubato %d1[ICON_GOLD] dal nostro tesoro di stato!</Italian>
+		<Spanish>&#161;Los enemigos infiltrados han saqueado %d1[ICON_GOLD] de nuestro tesoro!</Spanish>
+	</TEXT>
+
 </Civ4GameText>
