@@ -2009,10 +2009,11 @@ int CvTeam::getTotalVictoryScore() const
 		{
 			// Player has holy city
 			int tempReligion = GC.getGame().calculateReligionPercent((ReligionTypes)iK);
-			if (tempReligion > totalTeamReligion)
+			/*if (tempReligion > totalTeamReligion)
 			{
 				totalTeamReligion = tempReligion;
-			}
+			}*/
+			totalTeamReligion += tempReligion; // f1rpo: Cumulative by Matty's request
 		}
 	}
 
@@ -2112,10 +2113,10 @@ int CvTeam::getTotalVictoryScore() const
 
 
 	// Add the Power component
-	if (globalPowerHistory > 0)
+	/*if (globalPowerHistory > 0)
 	{
 		iTotalVictoryScore += (teamPowerHistory * 100 / globalPowerHistory);
-	}
+	}*/ // f1rpo: Disabled at Matty's request
 
 
 	// Add the Religion component
