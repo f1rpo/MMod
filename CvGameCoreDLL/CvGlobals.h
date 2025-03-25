@@ -12,8 +12,14 @@ static inline int ROUND_DIVIDE(int a, int b)
 	// <f1rpo> Bugfix; the above would round 2/3 to 0.
 	int iSign = ((a ^ b) >= 0 ? 1 : -1);
 	return (a + iSign * b / 2) / b; // </f1rpo>
+} // K-Mod end
+// f1rpo: Let's keep these together for now (from AdvCiv):
+inline int umodulo(int iDividend, int iDivisor)
+{
+	FAssert(iDivisor > 0);
+	int iR = iDividend % iDivisor;
+	return (iR >= 0 ? iR : iR + iDivisor);
 }
-// K-Mod end
 
 //#include "CvStructs.h"
 //
