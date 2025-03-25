@@ -10015,7 +10015,9 @@ bool CvCity::canCultureFlip(PlayerTypes eToPlayer) const
 {
 	if (isBarbarian())
 		return true;
-
+	// <f1rpo> Based on advc.099c
+	if (GET_TEAM(GET_PLAYER(eToPlayer).getTeam()).isVassal(getTeam()))
+		return false; // </f1rpo>
 	return !GC.getGameINLINE().isOption(GAMEOPTION_NO_CITY_FLIPPING) &&
 		(GC.getGameINLINE().isOption(GAMEOPTION_FLIPPING_AFTER_CONQUEST) || getPreviousOwner() == NO_PLAYER || GET_PLAYER(getPreviousOwner()).getTeam() != GET_PLAYER(eToPlayer).getTeam()) &&
 		getNumRevolts(eToPlayer) >= GC.getDefineINT("NUM_WARNING_REVOLTS");
