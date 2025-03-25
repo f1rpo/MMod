@@ -19861,7 +19861,15 @@ int CvPlayerAI::AI_calculateSpaceVictoryStage() const
 	{
 		return 0;
 	}
-
+	// <f1rpo>
+	if (GET_TEAM(getTeam()).hasSpaceshipArrived())
+		return 0; // Don't build another or something
+	int iArrived = 0;
+	for (int i = 0; i < MAX_CIV_TEAMS; i++)
+	{
+		if (GET_TEAM((TeamTypes)i).hasSpaceshipArrived())
+			iArrived++;
+	} // </f1rpo>
 	// If have built Apollo, then the race is on!
 	bool bHasApollo = false;
 	bool bNearAllTechs = true;
@@ -19906,7 +19914,7 @@ int CvPlayerAI::AI_calculateSpaceVictoryStage() const
 				}
 			}
 			// K-Mod end
-
+			// f1rpo (note): I guess this is still OK with Mastery?
 			if( !bOtherLaunched )
 			{
 				return 4;
@@ -19956,6 +19964,7 @@ int CvPlayerAI::AI_calculateSpaceVictoryStage() const
 					iSpaceTeams++;
 			}
 		}
+		iSpaceTeams += 2 * iArrived; // f1rpo
 		if (200 * iSpaceTeams / (1+iKnownTeams)
 			<= GC.getLeaderHeadInfo(getPersonalityType()).getSpaceVictoryWeight() + AI_getStrategyRand(3) % 100) // note, correlated with number used lower down.
 			return 3;
@@ -20003,12 +20012,15 @@ int CvPlayerAI::AI_calculateSpaceVictoryStage() const
 
 		if (iValue >= 100)
 		{
+			int iStage = 1;
 			if( getCurrentEra() >= GC.getNumEraInfos() - 3 )
 			{
-				return 2;
+				iStage = 2;
 			}
-
-			return 1;
+			// <f1rpo>
+			if (iArrived > 1)
+				iStage--; // </f1rpo>
+			return iStage;
 		}
 	}
 
