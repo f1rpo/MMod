@@ -4769,6 +4769,10 @@ bool CvPlayer::canTradeItem(PlayerTypes eWhoTo, TradeData item, bool bTestDenial
 				if (0 == GC.getGameINLINE().getMaxCityElimination())
 				{
 					if (!GET_TEAM(getTeam()).isAVassal() && !GET_TEAM(GET_PLAYER(eWhoTo).getTeam()).isVassal(getTeam()))
+						/*	<f1rpo> Based on advc.ctr - may cede to vassal so long as
+							master's nationality is not greater */ ||
+						(pCityTraded != NULL && pCityTraded->plot()->getCulture(eWhoTo) <=
+						pCityTraded->plot()->getCulture(getID())))) // </f1rpo>
 					{
 						pOurCapitalCity = getCapitalCity();
 						if (pOurCapitalCity != NULL)
