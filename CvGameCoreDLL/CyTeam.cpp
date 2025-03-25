@@ -881,6 +881,12 @@ int CyTeam::getLaunchSuccessRate(int /*VictoryTypes*/ eVictory)
 	return (m_pTeam ? m_pTeam->getLaunchSuccessRate((VictoryTypes)eVictory) : -1);
 }
 
+// f1rpo:
+int CyTeam::getVictoryRank(int /*VictoryTypes*/ eVictory)
+{
+	return (m_pTeam ? m_pTeam->getVictoryRank((VictoryTypes)eVictory) : -1);
+}
+
 
 int CyTeam::getEspionagePointsAgainstTeam(int /*TeamTypes*/ eIndex)
 {

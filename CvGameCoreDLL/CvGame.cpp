@@ -7821,30 +7821,45 @@ void CvGame::testVictory()
 			{
 				for (int iJ = 0; iJ < GC.getNumVictoryInfos(); iJ++)
 				{
-					if (testVictory((VictoryTypes)iJ, (TeamTypes)iI, &bEndScore))
+					VictoryTypes const eVictory = (VictoryTypes)iJ; // f1rpo
+					if (testVictory(eVictory, (TeamTypes)iI, &bEndScore))
 					{
-						if (kLoopTeam.getVictoryCountdown((VictoryTypes)iJ) < 0)
+						if (kLoopTeam.getVictoryCountdown(eVictory) < 0)
 						{
-							if (kLoopTeam.getVictoryDelay((VictoryTypes)iJ) == 0)
+							if (kLoopTeam.getVictoryDelay(eVictory) == 0)
 							{
-								kLoopTeam.setVictoryCountdown((VictoryTypes)iJ, 0);
+								kLoopTeam.setVictoryCountdown(eVictory, 0);
 							}
 						}
 
 						//update victory countdown
-						if (kLoopTeam.getVictoryCountdown((VictoryTypes)iJ) > 0)
+						if (kLoopTeam.getVictoryCountdown(eVictory) > 0)
 						{
-							kLoopTeam.changeVictoryCountdown((VictoryTypes)iJ, -1);
+							kLoopTeam.changeVictoryCountdown(eVictory, -1);
 						}
 
-						if (kLoopTeam.getVictoryCountdown((VictoryTypes)iJ) == 0)
+						if (kLoopTeam.getVictoryCountdown(eVictory) == 0)
 						{
-							if (getSorenRandNum(100, "Victory Success") < kLoopTeam.getLaunchSuccessRate((VictoryTypes)iJ))
+							if (getSorenRandNum(100, "Victory Success") < kLoopTeam.getLaunchSuccessRate(eVictory))
 							{
 								std::vector<int> aWinner;
 								aWinner.push_back(iI);
-								aWinner.push_back(iJ);
+								aWinner.push_back(eVictory);
 								aaiWinners.push_back(aWinner);
+								/*	<f1rpo> Record the order of victories of the same kind
+									(for Mastery scoring) */
+								/*	This gets reached turn after turn. Record only once
+									per team and victory. */
+								if (GET_TEAM((TeamTypes)iI).getVictoryRank(eVictory) < 0)
+								{
+									int iPriorWinners = 0;
+									for (int iPrior = 0; iPrior < MAX_CIV_TEAMS; iPrior++)
+									{	// Don't matter if still alive
+										if (GET_TEAM((TeamTypes)iPrior).getVictoryRank(eVictory) >= 0)
+											iPriorWinners++;
+									}
+									GET_TEAM((TeamTypes)iI).setVictoryRank(eVictory, iPriorWinners);
+								} // </f1rpo>
 							}
 							else
 							{

@@ -1242,8 +1242,13 @@ class CvVictoryScreen:
 
 						if self.teamLaunchedShip(activePlayer.getTeam().getID()):
 							if activePlayer.getTeam().hasSpaceshipArrived():
+								iSpaceScore = 100
+								iRank = activePlayer.getTeam().getVictoryRank(eSpaceVictory)
+								iRank = min(iRank, 3)
+								iRank = max(0, iRank)
+								iSpaceScore -= iRank * 25
 								#screen.setTableText(szTable, 1, iRow, localText.getText("TXT_KEY_VICTORY_SCREEN_LAUNCHED", ()), "", WidgetTypes.WIDGET_GENERAL, -1, -1, CvUtil.FONT_LEFT_JUSTIFY)
-								screen.setTableText(szTable, 2, iRow, u"<font=1b>%i</font>" %(100), "", WidgetTypes.WIDGET_GENERAL, -1, -1, CvUtil.FONT_LEFT_JUSTIFY)
+								screen.setTableText(szTable, 2, iRow, u"<font=1b>%i</font>" %(iSpaceScore), "", WidgetTypes.WIDGET_GENERAL, -1, -1, CvUtil.FONT_LEFT_JUSTIFY)
 							else:
 								victoryCountdown = gc.getTeam(iActiveTeam).getVictoryCountdown(eSpaceVictory)
 								victoryDate = CyGameTextMgr().getTimeStr(gc.getGame().getGameTurn() + victoryCountdown, False)

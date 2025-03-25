@@ -67,6 +67,7 @@ CvTeam::CvTeam()
 	m_paiTechCount = NULL;
 	m_paiTerrainTradeCount = NULL;
 	m_aiVictoryCountdown = NULL;
+	m_aiVictoryRank = NULL; // f1rpo
 	m_aiForceTeamVoteEligibilityCount = NULL;
 
 	m_pabHasTech = NULL;
@@ -160,6 +161,7 @@ void CvTeam::uninit()
 	SAFE_DELETE_ARRAY(m_paiTechCount);
 	SAFE_DELETE_ARRAY(m_paiTerrainTradeCount);
 	SAFE_DELETE_ARRAY(m_aiVictoryCountdown);
+	SAFE_DELETE_ARRAY(m_aiVictoryRank); // f1rpo
 	SAFE_DELETE_ARRAY(m_aiForceTeamVoteEligibilityCount);
 
 	SAFE_DELETE_ARRAY(m_pabHasTech);
@@ -338,6 +340,12 @@ void CvTeam::reset(TeamTypes eID, bool bConstructorCall)
 		{
 			m_aiVictoryCountdown[iI] = -1;
 		}
+		// <f1rpo>
+		m_aiVictoryRank = new int[GC.getNumVictoryInfos()];
+		for (iI = 0; iI < GC.getNumVictoryInfos(); iI++)
+		{
+			m_aiVictoryRank[iI] = -1;
+		} // </f1rpo>
 
 		FAssertMsg(m_pabHasTech==NULL, "about to leak memory, CvTeam::m_pabHasTech");
 		m_pabHasTech = new bool[GC.getNumTechInfos()];
@@ -2127,7 +2135,14 @@ int CvTeam::getTotalVictoryScore() const
 	//if (GC.getGame().getStarshipLaunched(getID()))
 	if (hasSpaceshipArrived()) // Karadoc
 	{
-		iTotalVictoryScore += 100;
+		//iTotalVictoryScore += 100;
+		// <f1rpo>
+		int iRank = getVictoryRank(GC.getGameINLINE().getSpaceVictory());
+		FAssertMsg(iRank >= 0, "SS arrived but rank not set");
+		iRank = range(iRank, 0, 3);
+		CvString sVarName = CvString::format("MASTERY_SPACE_SCORE_%d", iRank);
+		int iDefault = 100 - 25 * iRank;
+		iTotalVictoryScore += GC.getDefineINT(sVarName.c_str(), iDefault); // </f1rpo>
 	}
 
 	return iTotalVictoryScore;
@@ -5291,6 +5306,20 @@ void CvTeam::changeVictoryCountdown(VictoryTypes eIndex, int iChange)
 	}
 }
 
+/*	<f1rpo> Ranks are counted 0, 1, 2, ... with 0 being the best.
+	-1 means that the victory hasn't been achieved by this team yet. */
+int CvTeam::getVictoryRank(VictoryTypes eIndex) const
+{
+	FAssert(eIndex >= 0 && eIndex < GC.getNumVictoryInfos());
+	return m_aiVictoryRank[eIndex];
+}
+
+void CvTeam::setVictoryRank(VictoryTypes eIndex, int iRank)
+{
+	FAssert(eIndex >= 0 && eIndex < GC.getNumVictoryInfos());
+	m_aiVictoryRank[eIndex] = iRank;
+} // </f1rpo>
+
 int CvTeam::getVictoryDelay(VictoryTypes eVictory) const
 {
 	int iExtraDelayPercent = 0;
@@ -6837,6 +6866,14 @@ void CvTeam::read(FDataStreamBase* pStream)
 	pStream->Read(GC.getNumTechInfos(), m_paiTechCount);
 	pStream->Read(GC.getNumTerrainInfos(), m_paiTerrainTradeCount);
 	pStream->Read(GC.getNumVictoryInfos(), m_aiVictoryCountdown);
+	// <f1rpo>
+	if (uiFlag >= 2)
+		pStream->Read(GC.getNumVictoryInfos(), m_aiVictoryRank);
+	else
+	{	// Full score for everyone in legacy saves
+		if (hasSpaceshipArrived())
+			setVictoryRank(GC.getGameINLINE().getSpaceVictory(), 0);
+	} // </f1rpo>
 
 	pStream->Read(GC.getNumTechInfos(), m_pabHasTech);
 	pStream->Read(GC.getNumTechInfos(), m_pabNoTradeTech);
@@ -6863,6 +6900,7 @@ void CvTeam::write(FDataStreamBase* pStream)
 	int iI;
 
 	uint uiFlag = 1;
+	uiFlag = 2; // f1rpo (VictoryRank)
 	pStream->Write(uiFlag);		// flag for expansion
 
 	pStream->Write(m_iNumMembers);
@@ -6934,6 +6972,7 @@ void CvTeam::write(FDataStreamBase* pStream)
 	pStream->Write(GC.getNumTechInfos(), m_paiTechCount);
 	pStream->Write(GC.getNumTerrainInfos(), m_paiTerrainTradeCount);
 	pStream->Write(GC.getNumVictoryInfos(), m_aiVictoryCountdown);
+	pStream->Write(GC.getNumVictoryInfos(), m_aiVictoryRank); // f1rpo
 
 	pStream->Write(GC.getNumTechInfos(), m_pabHasTech);
 	pStream->Write(GC.getNumTechInfos(), m_pabNoTradeTech);

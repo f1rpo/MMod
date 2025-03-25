@@ -328,6 +328,8 @@ public:
 
 	int getVictoryCountdown(VictoryTypes eIndex) const;																							// Exposed to Python
 	void setVictoryCountdown(VictoryTypes eIndex, int iTurnsLeft);
+	int getVictoryRank(VictoryTypes eIndex) const; // f1rpo
+	void setVictoryRank(VictoryTypes eIndex, int iRank); //f1rpo
 	void changeVictoryCountdown(VictoryTypes eIndex, int iChange);
 	int getVictoryDelay(VictoryTypes eVictory) const;
 	DllExport bool canLaunch(VictoryTypes eVictory) const;		// Exposed to Python 
@@ -480,6 +482,7 @@ protected:
 	int* m_paiTechCount;
 	int* m_paiTerrainTradeCount;
 	int* m_aiVictoryCountdown;
+	int* m_aiVictoryRank; // f1rpo
 
 	int* m_aiEspionagePointsAgainstTeam;
 	int* m_aiCounterespionageTurnsLeftAgainstTeam;
