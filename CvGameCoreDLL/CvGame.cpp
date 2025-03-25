@@ -5465,7 +5465,9 @@ void CvGame::incrementProjectCreatedCount(ProjectTypes eIndex, int iExtra)
 // K. used for Mastery Victory
 int CvGame::countWorldWonders(bool bBuilt, PlayerTypes eBuilder) const
 {
-	FAssert(!bBuilt || eBuilder != NO_PLAYER);
+	/*	f1rpo: bBuilt, NO_PLAYER, i.e. all wonders built by anyone,
+		seems to be handled correctly. Python uses that too. */
+	//FAssert(!bBuilt || eBuilder != NO_PLAYER);
 
 	if (eBuilder == NO_PLAYER || !bBuilt)
 	{
